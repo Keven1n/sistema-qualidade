@@ -40,7 +40,7 @@ git clone https://github.com/Keven1n/sistema-qualidade.git
 cd sistema-qualidade
 
 # 2. Configure as variáveis de ambiente
-cp .env.example .env
+cp .env
 # Edite o .env com sua SECRET_KEY e gere o HASH da senha
 
 # 3. Suba o container
