@@ -1,23 +1,29 @@
-# Sistema de Qualidade — Controle de Soldagem
+# Sistema de Qualidade — Welding Quality Control System
 
-Sistema web para registro e controle de inspeções de soldagem em linha de produção industrial. Desenvolvido com foco em segurança, rastreabilidade e facilidade de uso no chão de fábrica.
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat&logo=fastapi&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=flat&logo=docker&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-database-003B57?style=flat&logo=sqlite&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-green?style=flat)
 
 ---
 
-## Funcionalidades
+## Português
 
-- **Autenticação segura** com bcrypt, bloqueio por tentativas e timeout de sessão
+Sistema web para registro e controle de inspeções de soldagem em linha de produção industrial. Desenvolvido com foco em segurança, rastreabilidade e facilidade de uso no chão de fábrica.
+
+### Funcionalidades
+
 - **Dashboard** com indicadores de aprovação, retrabalho e gráficos por soldador e modelo
 - **Registro de inspeções** com seleção de modelo, processo, defeitos e upload de fotos
 - **Histórico paginado** com filtros por status, soldador e processo
 - **Exportação** dos dados em CSV
+- **Autenticação segura** com bcrypt, bloqueio por tentativas e timeout de sessão
 - **Gerenciamento de usuários** com ativação e desativação de contas
 - **Modo demonstração** (visitante) para acesso somente leitura
 - **Criptografia opcional** das observações com Fernet
 
----
-
-## Tecnologias
+### Tecnologias
 
 | Camada | Tecnologia |
 |---|---|
@@ -29,46 +35,92 @@ Sistema web para registro e controle de inspeções de soldagem em linha de prod
 | Containerização | Docker, Docker Compose |
 
 ---
-<img width="1919" height="962" alt="image" src="https://github.com/user-attachments/assets/486302ee-e28c-4e7b-a8f9-4ba0aa676e8b" />
-<img width="1919" height="956" alt="image" src="https://github.com/user-attachments/assets/7615164e-68c4-4779-9210-ce2b20528aa2" />
-<img width="1919" height="955" alt="image" src="https://github.com/user-attachments/assets/e7f576a6-792f-43af-858a-ede3eb840688" />
-<img width="1919" height="954" alt="image" src="https://github.com/user-attachments/assets/d677c2e2-601c-44e4-aedd-574d0e3c5b28" />
-<img width="1919" height="958" alt="image" src="https://github.com/user-attachments/assets/5ce807a3-2c56-4950-8543-c892a6547bb4" />
 
+## English
 
-## Como rodar localmente
+A full-stack web application built to support welding inspection and quality control in industrial production lines. The system allows teams to register inspections, track defects, manage rework, and export reports — with a focus on traceability and ease of use on the factory floor.
 
-**Pré-requisitos:** Docker e Docker Compose instalados.
+### Features
+
+- **Dashboard** with real-time approval and rework metrics, charts by welder and model
+- **Inspection registration** with model/process selection, defect tagging, and photo upload
+- **Paginated history** with filters by status, welder, and process
+- **CSV export** of inspection data
+- **Secure authentication** with bcrypt, login attempt throttling, and session timeout
+- **User management** with account activation and deactivation
+- **Demo mode** (guest access) for read-only browsing
+- **Optional encryption** of observations using Fernet
+
+### Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Python 3.12, FastAPI, Uvicorn |
+| Frontend | Jinja2, HTML/CSS |
+| Database | SQLite |
+| Authentication | bcrypt, itsdangerous |
+| Encryption | cryptography (Fernet) |
+| Containerization | Docker, Docker Compose |
+
+---
+
+## Screenshots
+
+> **Dashboard** — Overview of approval rates and rework metrics by welder and model.
+
+> **Inspection Form** — Register new inspections with process, defect type, and photo upload.
+
+> **History Page** — Paginated log with filters for status, welder, and process.
+
+> **User Management** — Activate or deactivate team accounts.
+
+---
+
+## Getting Started / Como rodar
+
+**Prerequisites / Pré-requisitos:** Docker and Docker Compose installed.
 
 ```bash
-# 1. Clone o repositório
+# 1. Clone the repository
 git clone https://github.com/Keven1n/sistema-qualidade.git
 cd sistema-qualidade
 
-# 2. Configure as variáveis de ambiente
-cp .env
-# Edite o .env com sua SECRET_KEY e gere o HASH da senha
+# 2. Set up environment variables
+cp .env.example .env
+# Edit .env with your SECRET_KEY and password hash
 
-# 3. Suba o container
+# 3. Start the container
 docker-compose up -d
 ```
 
-Acesse em `http://localhost:8080`
+Access at / Acesse em: `http://localhost:8080`
 
-### Gerar hash da senha
+### Generate password hash / Gerar hash da senha
+
 ```bash
-python3 -c "import bcrypt; print(bcrypt.hashpw('SUA_SENHA'.encode(), bcrypt.gensalt()).decode())"
+python3 -c "import bcrypt; print(bcrypt.hashpw('YOUR_PASSWORD'.encode(), bcrypt.gensalt()).decode())"
 ```
 
 ---
 
-## Estrutura do projeto
+## Security / Segurança
+
+- Passwords hashed with **bcrypt**
+- Sessions signed with secret key (**itsdangerous**) and automatic timeout
+- Login attempt **rate limiting** and account lockout
+- File upload validated by **magic bytes** (not just extension)
+- Observations optionally **encrypted with Fernet**
+- Protection against **path traversal** in image uploads
+
+---
+
+## Project Structure / Estrutura do projeto
 
 ```
 sistema-qualidade/
 ├── app/
-│   └── main.py          # Rotas, lógica de negócio e autenticação
-├── templates/            # HTML com Jinja2
+│   └── main.py           # Routes, business logic, authentication
+├── templates/             # HTML with Jinja2
 │   ├── base.html
 │   ├── login.html
 │   ├── dashboard.html
@@ -76,7 +128,7 @@ sistema-qualidade/
 │   ├── historico.html
 │   ├── editar.html
 │   └── usuarios.html
-├── static/css/           # Estilos
+├── static/css/            # Stylesheets
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt
@@ -85,12 +137,12 @@ sistema-qualidade/
 
 ---
 
-## Deploy em produção (VPS)
+## Production Deploy
 
 ```bash
-# No servidor
+# On your server
 apt update && apt install -y docker.io docker-compose
-scp -r ./sistema-qualidade usuario@seu-servidor:/opt/sistema-qualidade
+scp -r ./sistema-qualidade user@your-server:/opt/sistema-qualidade
 
 cd /opt/sistema-qualidade
 cp .env.example .env
@@ -99,31 +151,25 @@ nano .env
 docker-compose up -d
 ```
 
-Recomendado colocar Nginx na frente com HTTPS via Let's Encrypt.
+> Recommended: place Nginx in front with HTTPS via Let's Encrypt.
 
 ---
 
-## Segurança
-
-- Senhas armazenadas com hash bcrypt
-- Sessões assinadas com chave secreta (itsdangerous)
-- Bloqueio de conta após tentativas excessivas de login
-- Timeout automático de sessão por inatividade
-- Validação de tipo de arquivo por magic bytes (não apenas extensão)
-- Observações criptografadas com Fernet (opcional)
-- Proteção contra path traversal no upload de imagens
-
----
-
-## Comandos úteis
+## Useful Commands / Comandos úteis
 
 ```bash
-# Logs em tempo real
+# Live logs
 docker-compose logs -f
 
-# Reconstruir após mudanças no código
+# Rebuild after code changes
 docker-compose up -d --build
 
-# Parar
+# Stop
 docker-compose down
 ```
+
+---
+
+## Author / Autor
+
+**Kevin** — [github.com/Keven1n](https://github.com/Keven1n) · [linkedin.com/in/kevin-90040agui](https://linkedin.com/in/kevin-90040agui)
