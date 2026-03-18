@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Sistema de Qualidade{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/style.css"/>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-icon">⚙️</span>
+      <span class="sidebar-title">Qualidade</span>
+    </div>
+
+    <div class="sidebar-user">
+      <span class="user-name">👤 {{ sessao.nome }}</span>
+      {% if sessao.demo %}
+        <span class="badge-demo">👁️ DEMO</span>
+      {% endif %}
+    </div>
+
+    <ul class="sidebar-menu">
+      <li><a href="/"        class="{% if active=='dashboard' %}active{% endif %}">📊 Dashboard</a></li>
+      <li><a href="/nova"    class="{% if active=='nova' %}active{% endif %}">📝 Nova Inspeção</a></li>
+      <li><a href="/historico" class="{% if active=='historico' %}active{% endif %}">📋 Histórico</a></li>
+      {% if not sessao.demo %}
+      <li><a href="/usuarios" class="{% if active=='usuarios' %}active{% endif %}">👥 Usuários</a></li>
+      {% endif %}
+    </ul>
+
+    <div class="sidebar-footer">
+      <a href="/logout" class="btn-logout">🚪 Sair</a>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

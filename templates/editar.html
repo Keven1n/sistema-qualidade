@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% set active = "historico" %}
+{% block title %}Editar Registro — Qualidade{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>✏️ Editar Registro #{{ row.id }}</h2>
+  <a href="/historico" class="btn btn-secondary">← Voltar</a>
+</div>
+
+<form method="post" action="/editar/{{ row.id }}" class="form-card">
+
+  <div class="form-row">
+    <div class="form-group">
+      <label>O.S.</label>
+      <input type="text" name="os_num" value="{{ row.os }}" required/>
+    </div>
+    <div class="form-group">
+      <label>Soldador</label>
+      <input type="text" name="soldador" value="{{ row.soldador }}" required/>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label>Processo</label>
+      <select name="processo">
+        <option {% if row.processo=="TIG Manual" %}selected{% endif %}>TIG Manual</option>
+        <option {% if row.processo=="TIG Orbital" %}selected{% endif %}>TIG Orbital</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <div class="radio-group">
+        <label><input type="radio" name="status_ins" value="Aprovado"
+          {% if row.status=="Aprovado" %}checked{% endif %}/> ✅ Aprovado</label>
+        <label><input type="radio" name="status_ins" value="Reprovado / Retrabalho"
+          {% if row.status=="Reprovado / Retrabalho" %}checked{% endif %}/> ❌ Reprovado</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>Defeitos</label>
+    <input type="text" name="defeitos" value="{{ row.defeitos }}"/>
+  </div>
+
+  <div class="form-group">
+    <label>Observações</label>
+    <textarea name="obs" rows="3" maxlength="2000">{{ row.obs }}</textarea>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">💾 Salvar Alterações</button>
+    <a href="/historico" class="btn btn-secondary">Cancelar</a>
+  </div>
+
+</form>
+{% endblock %}
