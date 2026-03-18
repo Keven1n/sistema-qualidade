@@ -64,18 +64,6 @@ A full-stack web application built to support welding inspection and quality con
 
 ---
 
-## Screenshots
-
-> **Dashboard** — Overview of approval rates and rework metrics by welder and model.
-
-> **Inspection Form** — Register new inspections with process, defect type, and photo upload.
-
-> **History Page** — Paginated log with filters for status, welder, and process.
-
-> **User Management** — Activate or deactivate team accounts.
-
----
-
 ## Getting Started / Como rodar
 
 **Prerequisites / Pré-requisitos:** Docker and Docker Compose installed.
