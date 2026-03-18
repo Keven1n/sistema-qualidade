@@ -29,6 +29,12 @@ Sistema web para registro e controle de inspeções de soldagem em linha de prod
 | Containerização | Docker, Docker Compose |
 
 ---
+<img width="1919" height="962" alt="image" src="https://github.com/user-attachments/assets/486302ee-e28c-4e7b-a8f9-4ba0aa676e8b" />
+<img width="1919" height="956" alt="image" src="https://github.com/user-attachments/assets/7615164e-68c4-4779-9210-ce2b20528aa2" />
+<img width="1919" height="955" alt="image" src="https://github.com/user-attachments/assets/e7f576a6-792f-43af-858a-ede3eb840688" />
+<img width="1919" height="954" alt="image" src="https://github.com/user-attachments/assets/d677c2e2-601c-44e4-aedd-574d0e3c5b28" />
+<img width="1919" height="958" alt="image" src="https://github.com/user-attachments/assets/5ce807a3-2c56-4950-8543-c892a6547bb4" />
+
 
 ## Como rodar localmente
 
