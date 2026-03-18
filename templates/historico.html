@@ -4,82 +4,82 @@
 
 {% block content %}
 <div class="page-header">
-  <h2>📋 Histórico de Inspeções</h2>
-  <a href="/exportar-csv" class="btn btn-secondary">📥 Exportar CSV</a>
+ <h2> Histórico de Inspeções</h2>
+ <a href="/exportar-csv" class="btn btn-secondary"> Exportar CSV</a>
 </div>
 
 {% if ok %}
-<div class="alert alert-success">✅ Registro salvo com sucesso!</div>
+<div class="alert alert-success"> Registro salvo com sucesso!</div>
 {% endif %}
 
 <form method="get" action="/historico" class="filter-bar">
-  <select name="status_f">
-    <option value="">Todos os status</option>
-    <option value="Aprovado"               {% if status_f=="Aprovado" %}selected{% endif %}>Aprovado</option>
-    <option value="Reprovado / Retrabalho" {% if status_f=="Reprovado / Retrabalho" %}selected{% endif %}>Reprovado</option>
-  </select>
-  <select name="soldador_f">
-    <option value="">Todos os soldadores</option>
-    {% for s in soldadores %}
-      <option value="{{ s }}" {% if soldador_f==s %}selected{% endif %}>{{ s }}</option>
-    {% endfor %}
-  </select>
-  <select name="processo_f">
-    <option value="">Todos os processos</option>
-    <option value="TIG Manual"  {% if processo_f=="TIG Manual" %}selected{% endif %}>TIG Manual</option>
-    <option value="TIG Orbital" {% if processo_f=="TIG Orbital" %}selected{% endif %}>TIG Orbital</option>
-  </select>
-  <button type="submit" class="btn btn-primary">Filtrar</button>
-  <a href="/historico" class="btn btn-secondary">Limpar</a>
+ <select name="status_f">
+ <option value="">Todos os status</option>
+ <option value="Aprovado" {% if status_f=="Aprovado" %}selected{% endif %}>Aprovado</option>
+ <option value="Reprovado / Retrabalho" {% if status_f=="Reprovado / Retrabalho" %}selected{% endif %}>Reprovado</option>
+ </select>
+ <select name="soldador_f">
+ <option value="">Todos os soldadores</option>
+ {% for s in soldadores %}
+ <option value="{{ s }}" {% if soldador_f==s %}selected{% endif %}>{{ s }}</option>
+ {% endfor %}
+ </select>
+ <select name="processo_f">
+ <option value="">Todos os processos</option>
+ <option value="TIG Manual" {% if processo_f=="TIG Manual" %}selected{% endif %}>TIG Manual</option>
+ <option value="TIG Orbital" {% if processo_f=="TIG Orbital" %}selected{% endif %}>TIG Orbital</option>
+ </select>
+ <button type="submit" class="btn btn-primary">Filtrar</button>
+ <a href="/historico" class="btn btn-secondary">Limpar</a>
 </form>
 
 <div class="table-wrapper">
-  <table class="data-table">
-    <thead>
-      <tr>
-        <th>#</th><th>Data</th><th>O.S.</th><th>Modelo</th>
-        <th>Soldador</th><th>Processo</th><th>Status</th><th>Defeitos</th><th>Ações</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for r in rows %}
-      <tr>
-        <td>{{ r.id }}</td>
-        <td>{{ r.data }}</td>
-        <td>{{ r.os }}</td>
-        <td>{{ r.modelo }}</td>
-        <td>{{ r.soldador }}</td>
-        <td>{{ r.processo }}</td>
-        <td>
-          <span class="badge {% if r.status == 'Aprovado' %}badge-green{% else %}badge-red{% endif %}">
-            {{ r.status }}
-          </span>
-        </td>
-        <td>{{ r.defeitos }}</td>
-        <td class="actions">
-          {% if not sessao.demo %}
-          <a href="/editar/{{ r.id }}" class="btn-sm btn-edit">✏️</a>
-          <form method="post" action="/excluir/{{ r.id }}" style="display:inline"
-                onsubmit="return confirm('Excluir registro #{{ r.id }}?')">
-            <button type="submit" class="btn-sm btn-delete">🗑️</button>
-          </form>
-          {% endif %}
-        </td>
-      </tr>
-      {% else %}
-      <tr><td colspan="9" class="empty">Nenhum registro encontrado.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+ <table class="data-table">
+ <thead>
+ <tr>
+ <th>#</th><th>Data</th><th>O.S.</th><th>Modelo</th>
+ <th>Soldador</th><th>Processo</th><th>Status</th><th>Defeitos</th><th>Ações</th>
+ </tr>
+ </thead>
+ <tbody>
+ {% for r in rows %}
+ <tr>
+ <td>{{ r.id }}</td>
+ <td>{{ r.data }}</td>
+ <td>{{ r.os }}</td>
+ <td>{{ r.modelo }}</td>
+ <td>{{ r.soldador }}</td>
+ <td>{{ r.processo }}</td>
+ <td>
+ <span class="badge {% if r.status == 'Aprovado' %}badge-green{% else %}badge-red{% endif %}">
+ {{ r.status }}
+ </span>
+ </td>
+ <td>{{ r.defeitos }}</td>
+ <td class="actions">
+ {% if not sessao.demo %}
+ <a href="/editar/{{ r.id }}" class="btn-sm btn-edit"></a>
+ <form method="post" action="/excluir/{{ r.id }}" style="display:inline"
+ onsubmit="return confirm('Excluir registro #{{ r.id }}?')">
+ <button type="submit" class="btn-sm btn-delete"></button>
+ </form>
+ {% endif %}
+ </td>
+ </tr>
+ {% else %}
+ <tr><td colspan="9" class="empty">Nenhum registro encontrado.</td></tr>
+ {% endfor %}
+ </tbody>
+ </table>
 </div>
 
 <div class="pagination">
-  {% if pagina > 1 %}
-    <a href="?pagina={{ pagina-1 }}&status_f={{ status_f }}&soldador_f={{ soldador_f }}&processo_f={{ processo_f }}" class="btn btn-secondary">‹ Anterior</a>
-  {% endif %}
-  <span>Página {{ pagina }} de {{ total_pags }} — {{ total }} registros</span>
-  {% if pagina < total_pags %}
-    <a href="?pagina={{ pagina+1 }}&status_f={{ status_f }}&soldador_f={{ soldador_f }}&processo_f={{ processo_f }}" class="btn btn-secondary">Próxima ›</a>
-  {% endif %}
+ {% if pagina > 1 %}
+ <a href="?pagina={{ pagina-1 }}&status_f={{ status_f }}&soldador_f={{ soldador_f }}&processo_f={{ processo_f }}" class="btn btn-secondary">‹ Anterior</a>
+ {% endif %}
+ <span>Página {{ pagina }} de {{ total_pags }} — {{ total }} registros</span>
+ {% if pagina < total_pags %}
+ <a href="?pagina={{ pagina+1 }}&status_f={{ status_f }}&soldador_f={{ soldador_f }}&processo_f={{ processo_f }}" class="btn btn-secondary">Próxima ›</a>
+ {% endif %}
 </div>
 {% endblock %}

@@ -4,63 +4,63 @@
 
 {% block content %}
 <div class="page-header">
-  <h2>👥 Gerenciar Usuários</h2>
+ <h2> Gerenciar Usuários</h2>
 </div>
 
 <div class="two-col">
 
-  <div class="form-card">
-    <h3>📋 Usuários Cadastrados</h3>
-    <div class="table-wrapper">
-      <table class="data-table">
-        <thead><tr><th>ID</th><th>Login</th><th>Nome</th><th>Status</th><th>Ação</th></tr></thead>
-        <tbody>
-          {% for u in users %}
-          <tr>
-            <td>{{ u.id }}</td>
-            <td>{{ u.usuario }}</td>
-            <td>{{ u.nome }}</td>
-            <td><span class="badge {% if u.ativo %}badge-green{% else %}badge-red{% endif %}">
-              {% if u.ativo %}✅ Ativo{% else %}❌ Inativo{% endif %}
-            </span></td>
-            <td>
-              <form method="post" action="/usuarios/{{ u.id }}/toggle" style="display:inline">
-                {% if u.ativo %}
-                  <input type="hidden" name="ativo" value="0"/>
-                  <button type="submit" class="btn-sm btn-delete">Desativar</button>
-                {% else %}
-                  <input type="hidden" name="ativo" value="1"/>
-                  <button type="submit" class="btn-sm btn-edit">Ativar</button>
-                {% endif %}
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
+ <div class="form-card">
+ <h3> Usuários Cadastrados</h3>
+ <div class="table-wrapper">
+ <table class="data-table">
+ <thead><tr><th>ID</th><th>Login</th><th>Nome</th><th>Status</th><th>Ação</th></tr></thead>
+ <tbody>
+ {% for u in users %}
+ <tr>
+ <td>{{ u.id }}</td>
+ <td>{{ u.usuario }}</td>
+ <td>{{ u.nome }}</td>
+ <td><span class="badge {% if u.ativo %}badge-green{% else %}badge-red{% endif %}">
+ {% if u.ativo %} Ativo{% else %} Inativo{% endif %}
+ </span></td>
+ <td>
+ <form method="post" action="/usuarios/{{ u.id }}/toggle" style="display:inline">
+ {% if u.ativo %}
+ <input type="hidden" name="ativo" value="0"/>
+ <button type="submit" class="btn-sm btn-delete">Desativar</button>
+ {% else %}
+ <input type="hidden" name="ativo" value="1"/>
+ <button type="submit" class="btn-sm btn-edit">Ativar</button>
+ {% endif %}
+ </form>
+ </td>
+ </tr>
+ {% endfor %}
+ </tbody>
+ </table>
+ </div>
+ </div>
 
-  <div class="form-card">
-    <h3>➕ Novo Usuário</h3>
-    <form method="post" action="/usuarios/criar">
-      <div class="form-group">
-        <label>Login (minúsculas, sem espaços)</label>
-        <input type="text" name="novo_usuario" required pattern="[a-z0-9_]+" title="Apenas letras minúsculas, números e _"/>
-      </div>
-      <div class="form-group">
-        <label>Nome completo</label>
-        <input type="text" name="novo_nome" required/>
-      </div>
-      <div class="form-group">
-        <label>Senha (mín. 6 caracteres)</label>
-        <input type="password" name="nova_senha" minlength="6" required/>
-      </div>
-      <div class="form-actions">
-        <button type="submit" class="btn btn-primary">➕ Criar Usuário</button>
-      </div>
-    </form>
-  </div>
+ <div class="form-card">
+ <h3> Novo Usuário</h3>
+ <form method="post" action="/usuarios/criar">
+ <div class="form-group">
+ <label>Login (minúsculas, sem espaços)</label>
+ <input type="text" name="novo_usuario" required pattern="[a-z0-9_]+" title="Apenas letras minúsculas, números e _"/>
+ </div>
+ <div class="form-group">
+ <label>Nome completo</label>
+ <input type="text" name="novo_nome" required/>
+ </div>
+ <div class="form-group">
+ <label>Senha (mín. 6 caracteres)</label>
+ <input type="password" name="nova_senha" minlength="6" required/>
+ </div>
+ <div class="form-actions">
+ <button type="submit" class="btn btn-primary"> Criar Usuário</button>
+ </div>
+ </form>
+ </div>
 
 </div>
 {% endblock %}
