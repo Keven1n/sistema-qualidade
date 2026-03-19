@@ -67,22 +67,27 @@ A full-stack web application built to support welding inspection and quality con
 ## Screenshots
 
 **Login**
+
 Secure login page with demo mode (guest access) for read-only browsing.
 <img width="1919" height="956" alt="Login" src="https://github.com/user-attachments/assets/af9217f3-c67f-463b-83e2-82fd601f291d" />
 
 **Dashboard**
+
 Overview of approval rates and rework metrics by welder and model.
 <img width="1918" height="957" alt="Dashboard" src="https://github.com/user-attachments/assets/acc47766-55b8-4a39-807c-71451abbc641" />
 
 **New Inspection / Nova Inspeção**
+
 Register new inspections with production line, tank model, welder, process, defects, and photo upload.
 <img width="1917" height="955" alt="Nova Inspeção" src="https://github.com/user-attachments/assets/d76d3029-c09f-4ebc-976b-e7f928ad015a" />
 
 **Inspection History / Historico de Inspeções**
+
 Paginated log with filters by status, welder, and process. Export to CSV available.
 <img width="1917" height="949" alt="Historico Inspeções" src="https://github.com/user-attachments/assets/92ba645d-4699-43ed-bdad-b5ccad353d15" />
 
 **User Management / Area de Usuarios**
+
 Activate or deactivate team accounts and create new users.
 <img width="1919" height="959" alt="Area de Usuarios" src="https://github.com/user-attachments/assets/b67cac6d-638e-4388-a1a3-16ec11d286b5" />
 
