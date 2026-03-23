@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% set active = "auditoria" %}
+{% block title %}Auditoria — Qualidade{% endblock %}
+
+{% block content %}
+<div class="page-header">
+ <h2>Log de Auditoria</h2>
+ <a href="/exportar-auditoria" class="btn btn-secondary">Exportar CSV</a>
+</div>
+
+<form method="get" action="/auditoria" class="filter-bar">
+ <select name="usuario_f">
+  <option value="">Todos os usuários</option>
+  {% for u in usuarios %}
+  <option value="{{ u }}" {% if usuario_f == u %}selected{% endif %}>{{ u }}</option>
+  {% endfor %}
+ </select>
+ <input type="text" name="acao_f" placeholder="Filtrar por ação..." value="{{ acao_f }}" style="flex:1;padding:0.4rem 0.75rem;border:1px solid var(--color-border-secondary);border-radius:6px"/>
+ <button type="submit" class="btn btn-primary">Filtrar</button>
+ <a href="/auditoria" class="btn btn-secondary">Limpar</a>
+</form>
+
+<div class="table-wrapper">
+ <table class="data-table">
+ <thead>
+  <tr><th>#</th><th>Data/Hora</th><th>Usuário</th><th>Ação</th><th>Alvo</th><th>Detalhe</th></tr>
+ </thead>
+ <tbody>
+ {% for r in rows %}
+ <tr>
+  <td>{{ r.id }}</td>
+  <td style="white-space:nowrap">{{ r.momento }}</td>
+  <td><strong>{{ r.usuario }}</strong></td>
+  <td>
+   {% set acao_cor = "" %}
+   {% if "exclu" in r.acao or "bloqueado" in r.acao or "falhou" in r.acao %}
+    {% set acao_cor = "badge-red" %}
+   {% elif "criado" in r.acao or "ativado" in r.acao or "ok" in r.acao %}
+    {% set acao_cor = "badge-green" %}
+   {% else %}
+    {% set acao_cor = "" %}
+   {% endif %}
+   <span class="badge {{ acao_cor }}">{{ r.acao }}</span>
+  </td>
+  <td>{{ r.alvo or "—" }}</td>
+  <td style="font-size:0.82rem;color:var(--color-text-secondary)">{{ r.detalhe or "—" }}</td>
+ </tr>
+ {% else %}
+ <tr><td colspan="6" class="empty">Nenhum registro encontrado.</td></tr>
+ {% endfor %}
+ </tbody>
+ </table>
+</div>
+
+<div class="pagination">
+ {% if pagina > 1 %}
+ <a href="?pagina={{ pagina-1 }}&usuario_f={{ usuario_f }}&acao_f={{ acao_f }}" class="btn btn-secondary">Anterior</a>
+ {% endif %}
+ <span>Página {{ pagina }} de {{ total_pags }} — {{ total }} eventos</span>
+ {% if pagina < total_pags %}
+ <a href="?pagina={{ pagina+1 }}&usuario_f={{ usuario_f }}&acao_f={{ acao_f }}" class="btn btn-secondary">Próxima</a>
+ {% endif %}
+</div>
+{% endblock %}

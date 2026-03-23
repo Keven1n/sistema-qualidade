@@ -2,6 +2,7 @@ version: "3.9"
 
 volumes:
   app_data:
+
 services:
   app:
     build: .
@@ -11,6 +12,14 @@ services:
       - app_data:/data
       - ./app:/app/app          # mapeia a pasta local direto no container
       - ./templates:/app/templates
+      # Monta pasta local para backups acessíveis fora do container
+      - ./backups:/data/backups
     env_file:
       - .env
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 15s

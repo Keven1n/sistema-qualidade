@@ -22,16 +22,17 @@
  </div>
 
  <ul class="sidebar-menu">
- <li><a href="/" class="{% if active=='dashboard' %}active{% endif %}"> Dashboard</a></li>
- <li><a href="/nova" class="{% if active=='nova' %}active{% endif %}"> Nova Inspeção</a></li>
- <li><a href="/historico" class="{% if active=='historico' %}active{% endif %}"> Histórico</a></li>
- {% if not sessao.demo %}
- <li><a href="/usuarios" class="{% if active=='usuarios' %}active{% endif %}"> Usuários</a></li>
+ <li><a href="/" class="{% if active=='dashboard' %}active{% endif %}">Dashboard</a></li>
+ <li><a href="/nova" class="{% if active=='nova' %}active{% endif %}">Nova Inspeção</a></li>
+ <li><a href="/historico" class="{% if active=='historico' %}active{% endif %}">Histórico</a></li>
+ {% if sessao.papel == 'admin' %}
+ <li><a href="/usuarios" class="{% if active=='usuarios' %}active{% endif %}">Usuários</a></li>
+ <li><a href="/auditoria" class="{% if active=='auditoria' %}active{% endif %}">Auditoria</a></li>
  {% endif %}
  </ul>
 
  <div class="sidebar-footer">
- <a href="/logout" class="btn-logout"> Sair</a>
+ <a href="/logout" class="btn-logout">Sair</a>
  </div>
  </nav>
 
