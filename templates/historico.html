@@ -4,82 +4,107 @@
 
 {% block content %}
 <div class="page-header">
- <h2> Histórico de Inspeções</h2>
- <a href="/exportar-csv" class="btn btn-secondary"> Exportar CSV</a>
+ <h2>Histórico de Inspeções</h2>
+ <a href="/exportar-csv?data_ini={{ data_ini }}&data_fim={{ data_fim }}" class="btn btn-secondary">Exportar CSV</a>
 </div>
 
 {% if ok %}
-<div class="alert alert-success"> Registro salvo com sucesso!</div>
+<div class="alert alert-success">Registro salvo com sucesso!</div>
 {% endif %}
 
 <form method="get" action="/historico" class="filter-bar">
  <select name="status_f">
- <option value="">Todos os status</option>
- <option value="Aprovado" {% if status_f=="Aprovado" %}selected{% endif %}>Aprovado</option>
- <option value="Reprovado / Retrabalho" {% if status_f=="Reprovado / Retrabalho" %}selected{% endif %}>Reprovado</option>
+  <option value="">Todos os status</option>
+  <option value="Aprovado" {% if status_f=="Aprovado" %}selected{% endif %}>Aprovado</option>
+  <option value="Reprovado / Retrabalho" {% if status_f=="Reprovado / Retrabalho" %}selected{% endif %}>Reprovado</option>
  </select>
  <select name="soldador_f">
- <option value="">Todos os soldadores</option>
- {% for s in soldadores %}
- <option value="{{ s }}" {% if soldador_f==s %}selected{% endif %}>{{ s }}</option>
- {% endfor %}
+  <option value="">Todos os soldadores</option>
+  {% for s in soldadores %}
+  <option value="{{ s }}" {% if soldador_f==s %}selected{% endif %}>{{ s }}</option>
+  {% endfor %}
  </select>
  <select name="processo_f">
- <option value="">Todos os processos</option>
- <option value="TIG Manual" {% if processo_f=="TIG Manual" %}selected{% endif %}>TIG Manual</option>
- <option value="TIG Orbital" {% if processo_f=="TIG Orbital" %}selected{% endif %}>TIG Orbital</option>
+  <option value="">Todos os processos</option>
+  <option value="TIG Manual" {% if processo_f=="TIG Manual" %}selected{% endif %}>TIG Manual</option>
+  <option value="TIG Orbital" {% if processo_f=="TIG Orbital" %}selected{% endif %}>TIG Orbital</option>
  </select>
+ <input type="date" name="data_ini" value="{{ data_ini }}" title="Data inicial"/>
+ <input type="date" name="data_fim" value="{{ data_fim }}" title="Data final"/>
  <button type="submit" class="btn btn-primary">Filtrar</button>
  <a href="/historico" class="btn btn-secondary">Limpar</a>
 </form>
 
 <div class="table-wrapper">
  <table class="data-table">
- <thead>
- <tr>
- <th>#</th><th>Data</th><th>O.S.</th><th>Modelo</th>
- <th>Soldador</th><th>Processo</th><th>Status</th><th>Defeitos</th><th>Ações</th>
- </tr>
- </thead>
- <tbody>
- {% for r in rows %}
- <tr>
- <td>{{ r.id }}</td>
- <td>{{ r.data }}</td>
- <td>{{ r.os }}</td>
- <td>{{ r.modelo }}</td>
- <td>{{ r.soldador }}</td>
- <td>{{ r.processo }}</td>
- <td>
- <span class="badge {% if r.status == 'Aprovado' %}badge-green{% else %}badge-red{% endif %}">
- {{ r.status }}
- </span>
- </td>
- <td>{{ r.defeitos }}</td>
- <td class="actions">
- {% if not sessao.demo %}
- <a href="/editar/{{ r.id }}" class="btn-sm btn-edit"></a>
- <form method="post" action="/excluir/{{ r.id }}" style="display:inline"
- onsubmit="return confirm('Excluir registro #{{ r.id }}?')">
- <button type="submit" class="btn-sm btn-delete"></button>
- </form>
- {% endif %}
- </td>
- </tr>
- {% else %}
- <tr><td colspan="9" class="empty">Nenhum registro encontrado.</td></tr>
- {% endfor %}
- </tbody>
+  <thead>
+   <tr>
+    <th>#</th><th>Data</th><th>O.S.</th><th>Modelo</th>
+    <th>Soldador</th><th>Processo</th><th>Status</th><th>Defeitos</th><th>Fotos</th><th>Ações</th>
+   </tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+  <tr>
+   <td>{{ r.id }}</td>
+   <td>{{ r.data }}</td>
+   <td>
+    {{ r.os }}
+    {% if r['reinspeção_de'] %}
+    <span style="font-size:0.75rem;color:var(--color-text-secondary)"> (reinsp. #{{ r['reinspeção_de'] }})</span>
+    {% endif %}
+   </td>
+   <td>{{ r.modelo }}</td>
+   <td>{{ r.soldador }}</td>
+   <td>{{ r.processo }}</td>
+   <td>
+    <span class="badge {% if r.status == 'Aprovado' %}badge-green{% else %}badge-red{% endif %}">
+     {{ r.status }}
+    </span>
+   </td>
+   <td>{{ r.defeitos }}</td>
+   <td>
+    {% if r.fotos %}
+     {% for foto in r.fotos.split(';') %}
+      {% if foto %}
+      <a href="/fotos/{{ foto }}" target="_blank">
+       <img src="/fotos/{{ foto }}" style="height:40px;width:40px;object-fit:cover;border-radius:4px;margin-right:2px;cursor:pointer"/>
+      </a>
+      {% endif %}
+     {% endfor %}
+    {% else %}
+     <span style="color:var(--color-text-secondary);font-size:0.8rem">—</span>
+    {% endif %}
+   </td>
+   <td class="actions">
+    {% if not sessao.demo %}
+     {% if r.status == 'Reprovado / Retrabalho' %}
+     <a href="/nova?reinspeção_de={{ r.id }}" class="btn-sm btn-edit" title="Registrar reinspeção">Reinsp.</a>
+     {% endif %}
+     {% if sessao.papel == 'admin' %}
+     <a href="/editar/{{ r.id }}" class="btn-sm btn-edit">Editar</a>
+     <form method="post" action="/excluir/{{ r.id }}" style="display:inline"
+           onsubmit="return confirm('Excluir registro #{{ r.id }}?')">
+      <button type="submit" class="btn-sm btn-delete">Excluir</button>
+     </form>
+     {% endif %}
+    {% endif %}
+   </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="10" class="empty">Nenhum registro encontrado.</td></tr>
+  {% endfor %}
+  </tbody>
  </table>
 </div>
 
 <div class="pagination">
  {% if pagina > 1 %}
- <a href="?pagina={{ pagina-1 }}&status_f={{ status_f }}&soldador_f={{ soldador_f }}&processo_f={{ processo_f }}" class="btn btn-secondary">‹ Anterior</a>
+ <a href="?pagina={{ pagina-1 }}&status_f={{ status_f }}&soldador_f={{ soldador_f }}&processo_f={{ processo_f }}&data_ini={{ data_ini }}&data_fim={{ data_fim }}" class="btn btn-secondary">Anterior</a>
  {% endif %}
  <span>Página {{ pagina }} de {{ total_pags }} — {{ total }} registros</span>
  {% if pagina < total_pags %}
- <a href="?pagina={{ pagina+1 }}&status_f={{ status_f }}&soldador_f={{ soldador_f }}&processo_f={{ processo_f }}" class="btn btn-secondary">Próxima ›</a>
+ <a href="?pagina={{ pagina+1 }}&status_f={{ status_f }}&soldador_f={{ soldador_f }}&processo_f={{ processo_f }}&data_ini={{ data_ini }}&data_fim={{ data_fim }}" class="btn btn-secondary">Próxima</a>
  {% endif %}
 </div>
 {% endblock %}

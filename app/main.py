@@ -8,7 +8,7 @@ from typing import Optional
 import bcrypt
 from cryptography.fernet import Fernet
 from fastapi import FastAPI, Request, Form, UploadFile, File, Depends, HTTPException, status
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
@@ -32,18 +32,17 @@ TIPOS_OK    = set(MAGIC_BYTES.values())
 fernet = Fernet(ENC_KEY.encode()) if ENC_KEY else None
 Path(IMG_DIR).mkdir(parents=True, exist_ok=True)
 
-# modelos por linha de produção — futuramente mover pro banco
-CATALOGO = {
-    "Linha Leite":      ["RA-100 - Resfriador Aberto", "MC-200 - Meia Cana", "FH-300 - Fechado Horizontal", "FV-400 - Vertical"],
-    "Linha Industrial": ["IS-500 - Isotérmico", "MX-600 - Mistura", "ES-700 - Estocagem", "PR-800 - Processo"],
-    "Tinas de Sorvete": ["MT-900 - Maturadora", "MG-910 - Maturadora Gás", "PT-920 - Pasteurizadora"],
-}
-
 # papéis disponíveis:
 #   admin     — acesso total
 #   inspetor  — registra inspeções, vê histórico e dashboard
 #   visitante — só leitura, igual ao modo demo mas com login real
 PAPEIS_VALIDOS = {"admin", "inspetor", "visitante"}
+
+# processos de solda — lista fixa por enquanto
+PROCESSOS = ["TIG Manual", "TIG Orbital"]
+
+# defeitos possíveis — lista fixa por enquanto
+DEFEITOS_OPCOES = ["Porosidade", "Trinca", "Falta de Fusão", "Mordedura", "Excesso de Reforço", "Oxidação"]
 
 
 def get_db():
@@ -58,7 +57,8 @@ def init_db():
         CREATE TABLE IF NOT EXISTS inspecoes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             data TEXT, os TEXT, modelo TEXT, soldador TEXT,
-            processo TEXT, status TEXT, defeitos TEXT, obs TEXT, fotos TEXT
+            processo TEXT, status TEXT, defeitos TEXT, obs TEXT, fotos TEXT,
+            reinspeção_de INTEGER REFERENCES inspecoes(id)
         );
 
         CREATE TABLE IF NOT EXISTS usuarios (
@@ -87,18 +87,57 @@ def init_db():
             detalhe TEXT
         );
 
+        -- soldadores cadastrados — substituem a lista hard-coded no HTML
+        CREATE TABLE IF NOT EXISTS soldadores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT UNIQUE NOT NULL,
+            ativo INTEGER DEFAULT 1
+        );
+
+        -- catálogo de linhas e modelos — substitui o dict no código
+        CREATE TABLE IF NOT EXISTS catalogo (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            linha TEXT NOT NULL,
+            modelo TEXT NOT NULL,
+            ativo INTEGER DEFAULT 1,
+            UNIQUE(linha, modelo)
+        );
+
         CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario);
         CREATE INDEX IF NOT EXISTS idx_auditoria_momento ON auditoria(momento);
         CREATE INDEX IF NOT EXISTS idx_inspecoes_data    ON inspecoes(data);
+        CREATE INDEX IF NOT EXISTS idx_inspecoes_os      ON inspecoes(os);
     """)
     conn.commit()
 
-    # banco legado não tem a coluna papel — adiciona sem quebrar nada
-    try:
-        conn.execute("ALTER TABLE usuarios ADD COLUMN papel TEXT DEFAULT 'inspetor'")
+    # migrações para banco legado
+    for sql in [
+        "ALTER TABLE usuarios ADD COLUMN papel TEXT DEFAULT 'inspetor'",
+        "ALTER TABLE inspecoes ADD COLUMN reinspeção_de INTEGER REFERENCES inspecoes(id)",
+    ]:
+        try:
+            conn.execute(sql)
+            conn.commit()
+        except Exception:
+            pass
+
+    # popula soldadores padrão se a tabela estiver vazia
+    if not conn.execute("SELECT 1 FROM soldadores").fetchone():
+        for nome in ["Carlos Silva", "João Souza", "Maria Oliveira"]:
+            conn.execute("INSERT OR IGNORE INTO soldadores (nome) VALUES (?)", (nome,))
         conn.commit()
-    except Exception:
-        pass
+
+    # popula catálogo padrão se a tabela estiver vazia
+    if not conn.execute("SELECT 1 FROM catalogo").fetchone():
+        catalogo_inicial = {
+            "Linha Leite":      ["RA-100 - Resfriador Aberto", "MC-200 - Meia Cana", "FH-300 - Fechado Horizontal", "FV-400 - Vertical"],
+            "Linha Industrial": ["IS-500 - Isotérmico", "MX-600 - Mistura", "ES-700 - Estocagem", "PR-800 - Processo"],
+            "Tinas de Sorvete": ["MT-900 - Maturadora", "MG-910 - Maturadora Gás", "PT-920 - Pasteurizadora"],
+        }
+        for linha, modelos in catalogo_inicial.items():
+            for modelo in modelos:
+                conn.execute("INSERT OR IGNORE INTO catalogo (linha, modelo) VALUES (?,?)", (linha, modelo))
+        conn.commit()
 
     h = HASH_LUCAS.strip().strip('"\'').strip()
     if h.startswith('$2b$') and len(h) >= 59:
@@ -114,6 +153,21 @@ def init_db():
             )
         conn.commit()
     conn.close()
+
+
+def get_catalogo(conn) -> dict:
+    rows = conn.execute(
+        "SELECT linha, modelo FROM catalogo WHERE ativo=1 ORDER BY linha, modelo"
+    ).fetchall()
+    catalogo = {}
+    for r in rows:
+        catalogo.setdefault(r["linha"], []).append(r["modelo"])
+    return catalogo
+
+def get_soldadores(conn) -> list:
+    return [r["nome"] for r in conn.execute(
+        "SELECT nome FROM soldadores WHERE ativo=1 ORDER BY nome"
+    ).fetchall()]
 
 
 def registrar_auditoria(usuario: str, acao: str, alvo: Optional[str] = None, detalhe: Optional[str] = None):
@@ -170,9 +224,6 @@ def require_inspetor_ou_admin(request: Request):
     if sessao.get("papel") not in ("admin", "inspetor"):
         raise HTTPException(status_code=403, detail="Sem permissão para esta ação.")
     return sessao
-
-def pode_editar(sessao: dict) -> bool:
-    return sessao.get("papel") == "admin"
 
 
 def _now_str():
@@ -236,7 +287,7 @@ async def salvar_imagens(files: list) -> str:
         caminho = os.path.join(IMG_DIR, nome)
         with open(caminho, "wb") as f:
             f.write(conteudo)
-        caminhos.append(caminho)
+        caminhos.append(nome)  # salva só o nome, não o path absoluto
     return ";".join(caminhos)
 
 
@@ -292,11 +343,20 @@ def logout(request: Request):
 
 
 @app.get("/", response_class=HTMLResponse)
-def dashboard(request: Request, sessao: dict = Depends(get_sessao)):
+def dashboard(request: Request, sessao: dict = Depends(get_sessao),
+              data_ini: str = "", data_fim: str = ""):
     if not sessao:
         return RedirectResponse("/login", status_code=303)
     conn = get_db()
-    rows = conn.execute("SELECT status, soldador, modelo, defeitos FROM inspecoes").fetchall()
+
+    query  = "SELECT status, soldador, modelo, defeitos FROM inspecoes WHERE 1=1"
+    params = []
+    if data_ini:
+        query += " AND data >= ?"; params.append(data_ini)
+    if data_fim:
+        query += " AND data <= ?"; params.append(data_fim)
+
+    rows = conn.execute(query, params).fetchall()
     conn.close()
 
     total      = len(rows)
@@ -318,16 +378,31 @@ def dashboard(request: Request, sessao: dict = Depends(get_sessao)):
         "taxa_apr": taxa_apr, "taxa_repr": taxa_repr,
         "status_chart": status_chart, "soldador_chart": soldador_chart,
         "modelo_chart": modelo_chart, "defeitos_chart": defeitos_chart,
+        "data_ini": data_ini, "data_fim": data_fim,
     })
 
 
 @app.get("/nova", response_class=HTMLResponse)
-def nova_page(request: Request, sessao: dict = Depends(get_sessao)):
+def nova_page(request: Request, sessao: dict = Depends(get_sessao),
+              reinspeção_de: Optional[int] = None):
     if not sessao:
         return RedirectResponse("/login", status_code=303)
+    conn = get_db()
+    catalogo   = get_catalogo(conn)
+    soldadores = get_soldadores(conn)
+
+    # se vier de um retrabalho, pré-carrega os dados da inspeção original
+    origem = None
+    if reinspeção_de:
+        origem = conn.execute("SELECT * FROM inspecoes WHERE id=?", (reinspeção_de,)).fetchone()
+    conn.close()
+
     return templates.TemplateResponse("nova.html", {
-        "request": request, "sessao": sessao, "catalogo": CATALOGO,
-        "today": datetime.today().strftime("%Y-%m-%d")
+        "request": request, "sessao": sessao,
+        "catalogo": catalogo, "soldadores": soldadores,
+        "processos": PROCESSOS, "defeitos_opcoes": DEFEITOS_OPCOES,
+        "today": datetime.today().strftime("%Y-%m-%d"),
+        "reinspeção_de": reinspeção_de, "origem": origem,
     })
 
 @app.post("/nova")
@@ -343,30 +418,53 @@ async def nova_post(
     defeitos: list[str] = Form(default=[]),
     obs: str = Form(default=""),
     fotos: list[UploadFile] = File(default=[]),
+    reinspeção_de: Optional[int] = Form(default=None),
 ):
+    conn = get_db()
+
+    # bloqueia O.S. duplicada — a menos que seja uma reinspeção
+    if not reinspeção_de:
+        duplicada = conn.execute(
+            "SELECT id FROM inspecoes WHERE os=? AND reinspeção_de IS NULL", (os_num.strip(),)
+        ).fetchone()
+        if duplicada:
+            conn.close()
+            soldadores = get_soldadores(conn) if not conn else []
+            conn2 = get_db()
+            catalogo   = get_catalogo(conn2)
+            soldadores = get_soldadores(conn2)
+            conn2.close()
+            return templates.TemplateResponse("nova.html", {
+                "request": request, "sessao": sessao,
+                "catalogo": catalogo, "soldadores": soldadores,
+                "processos": PROCESSOS, "defeitos_opcoes": DEFEITOS_OPCOES,
+                "today": data_inspecao, "reinspeção_de": None, "origem": None,
+                "erro": f"O.S. {os_num.strip()} já está registrada (registro #{duplicada['id']}). Use a reinspeção se for retrabalho.",
+            })
+
     obs_salva = fernet.encrypt(obs.encode()).decode() if fernet else obs
     caminhos  = await salvar_imagens(fotos)
-    conn = get_db()
     cur = conn.execute(
-        "INSERT INTO inspecoes (data,os,modelo,soldador,processo,status,defeitos,obs,fotos) VALUES (?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO inspecoes (data,os,modelo,soldador,processo,status,defeitos,obs,fotos,reinspeção_de) VALUES (?,?,?,?,?,?,?,?,?,?)",
         (data_inspecao, os_num.strip(), modelo, soldador, processo, status_ins,
-         ", ".join(defeitos) or "N/A", obs_salva, caminhos)
+         ", ".join(defeitos) or "N/A", obs_salva, caminhos, reinspeção_de)
     )
     novo_id = cur.lastrowid
     conn.commit()
     conn.close()
-    registrar_auditoria(
-        sessao.get("usuario", "?"), "inspecao_criada",
-        alvo=f"inspecao#{novo_id}",
-        detalhe=f"os={os_num.strip()} status={status_ins}"
-    )
+
+    detalhe = f"os={os_num.strip()} status={status_ins}"
+    if reinspeção_de:
+        detalhe += f" reinspeção_de={reinspeção_de}"
+    registrar_auditoria(sessao.get("usuario", "?"), "inspecao_criada",
+                        alvo=f"inspecao#{novo_id}", detalhe=detalhe)
     return RedirectResponse("/historico?ok=1", status_code=303)
 
 
 @app.get("/historico", response_class=HTMLResponse)
 def historico(request: Request, sessao: dict = Depends(get_sessao),
               pagina: int = 1, status_f: str = "", soldador_f: str = "",
-              processo_f: str = "", ok: str = ""):
+              processo_f: str = "", data_ini: str = "", data_fim: str = "", ok: str = ""):
     if not sessao:
         return RedirectResponse("/login", status_code=303)
 
@@ -374,15 +472,19 @@ def historico(request: Request, sessao: dict = Depends(get_sessao),
     query  = "SELECT * FROM inspecoes WHERE 1=1"
     params = []
     if status_f:
-        query += " AND status=?";   params.append(status_f)
+        query += " AND status=?";    params.append(status_f)
     if soldador_f:
-        query += " AND soldador=?"; params.append(soldador_f)
+        query += " AND soldador=?";  params.append(soldador_f)
     if processo_f:
-        query += " AND processo=?"; params.append(processo_f)
+        query += " AND processo=?";  params.append(processo_f)
+    if data_ini:
+        query += " AND data >= ?";   params.append(data_ini)
+    if data_fim:
+        query += " AND data <= ?";   params.append(data_fim)
     query += " ORDER BY id DESC"
 
     rows       = conn.execute(query, params).fetchall()
-    soldadores = [r["soldador"] for r in conn.execute("SELECT DISTINCT soldador FROM inspecoes").fetchall()]
+    soldadores = get_soldadores(conn)
     conn.close()
 
     ITENS      = 20
@@ -395,20 +497,27 @@ def historico(request: Request, sessao: dict = Depends(get_sessao),
         "rows": rows_pag, "total": len(rows),
         "pagina": pagina, "total_pags": total_pags,
         "status_f": status_f, "soldador_f": soldador_f, "processo_f": processo_f,
+        "data_ini": data_ini, "data_fim": data_fim,
         "soldadores": soldadores, "ok": ok,
     })
 
 @app.get("/exportar-csv")
-def exportar_csv(request: Request, sessao: dict = Depends(require_auth)):
-    conn = get_db()
-    rows = conn.execute(
-        "SELECT id,data,os,modelo,soldador,processo,status,defeitos,obs FROM inspecoes ORDER BY id DESC"
-    ).fetchall()
+def exportar_csv(request: Request, sessao: dict = Depends(require_auth),
+                 data_ini: str = "", data_fim: str = ""):
+    conn   = get_db()
+    query  = "SELECT id,data,os,modelo,soldador,processo,status,defeitos,obs,reinspeção_de FROM inspecoes WHERE 1=1"
+    params = []
+    if data_ini:
+        query += " AND data >= ?"; params.append(data_ini)
+    if data_fim:
+        query += " AND data <= ?"; params.append(data_fim)
+    query += " ORDER BY id DESC"
+    rows = conn.execute(query, params).fetchall()
     conn.close()
     registrar_auditoria(sessao.get("usuario", "?"), "exportou_csv")
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["ID", "Data", "O.S.", "Modelo", "Soldador", "Processo", "Status", "Defeitos", "Obs"])
+    writer.writerow(["ID", "Data", "O.S.", "Modelo", "Soldador", "Processo", "Status", "Defeitos", "Obs", "Reinspeção de"])
     for r in rows:
         writer.writerow(list(r))
     output.seek(0)
@@ -419,11 +528,15 @@ def exportar_csv(request: Request, sessao: dict = Depends(require_auth)):
 @app.get("/editar/{id_reg}", response_class=HTMLResponse)
 def editar_page(id_reg: int, request: Request, sessao: dict = Depends(require_admin)):
     conn = get_db()
-    row  = conn.execute("SELECT * FROM inspecoes WHERE id=?", (id_reg,)).fetchone()
+    row        = conn.execute("SELECT * FROM inspecoes WHERE id=?", (id_reg,)).fetchone()
+    soldadores = get_soldadores(conn)
     conn.close()
     if not row:
         raise HTTPException(404, "Registro não encontrado.")
-    return templates.TemplateResponse("editar.html", {"request": request, "sessao": sessao, "row": row})
+    return templates.TemplateResponse("editar.html", {
+        "request": request, "sessao": sessao,
+        "row": row, "soldadores": soldadores, "processos": PROCESSOS,
+    })
 
 @app.post("/editar/{id_reg}")
 def editar_post(id_reg: int, request: Request,
@@ -431,7 +544,7 @@ def editar_post(id_reg: int, request: Request,
                 os_num: str = Form(...), soldador: str = Form(...),
                 processo: str = Form(...), status_ins: str = Form(...),
                 defeitos: str = Form(default=""), obs: str = Form(default="")):
-    conn = get_db()
+    conn  = get_db()
     antes = conn.execute("SELECT os, soldador, status FROM inspecoes WHERE id=?", (id_reg,)).fetchone()
     conn.execute(
         "UPDATE inspecoes SET os=?,soldador=?,processo=?,status=?,defeitos=?,obs=? WHERE id=?",
@@ -533,6 +646,83 @@ def alterar_papel(id_user: int, request: Request,
     return RedirectResponse("/usuarios", status_code=303)
 
 
+# gerenciamento de soldadores — só admin
+@app.get("/soldadores", response_class=HTMLResponse)
+def soldadores_page(request: Request, sessao: dict = Depends(require_admin)):
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM soldadores ORDER BY nome").fetchall()
+    conn.close()
+    return templates.TemplateResponse("soldadores.html", {
+        "request": request, "sessao": sessao, "soldadores": rows
+    })
+
+@app.post("/soldadores/criar")
+def criar_soldador(request: Request, sessao: dict = Depends(require_admin),
+                   nome: str = Form(...)):
+    conn = get_db()
+    try:
+        conn.execute("INSERT INTO soldadores (nome) VALUES (?)", (nome.strip(),))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        raise HTTPException(400, "Soldador já existe.")
+    finally:
+        conn.close()
+    registrar_auditoria(sessao.get("usuario", "?"), "soldador_criado", alvo=nome.strip())
+    return RedirectResponse("/soldadores", status_code=303)
+
+@app.post("/soldadores/{id_s}/toggle")
+def toggle_soldador(id_s: int, request: Request, sessao: dict = Depends(require_admin),
+                    ativo: int = Form(...)):
+    conn = get_db()
+    row  = conn.execute("SELECT nome FROM soldadores WHERE id=?", (id_s,)).fetchone()
+    conn.execute("UPDATE soldadores SET ativo=? WHERE id=?", (ativo, id_s))
+    conn.commit()
+    conn.close()
+    acao = "soldador_ativado" if ativo else "soldador_desativado"
+    registrar_auditoria(sessao.get("usuario", "?"), acao, alvo=row["nome"] if row else str(id_s))
+    return RedirectResponse("/soldadores", status_code=303)
+
+
+# gerenciamento de catálogo — só admin
+@app.get("/catalogo-admin", response_class=HTMLResponse)
+def catalogo_page(request: Request, sessao: dict = Depends(require_admin)):
+    conn  = get_db()
+    rows  = conn.execute("SELECT * FROM catalogo ORDER BY linha, modelo").fetchall()
+    conn.close()
+    return templates.TemplateResponse("catalogo.html", {
+        "request": request, "sessao": sessao, "itens": rows
+    })
+
+@app.post("/catalogo-admin/criar")
+def criar_catalogo(request: Request, sessao: dict = Depends(require_admin),
+                   linha: str = Form(...), modelo: str = Form(...)):
+    conn = get_db()
+    try:
+        conn.execute("INSERT INTO catalogo (linha, modelo) VALUES (?,?)",
+                     (linha.strip(), modelo.strip()))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        raise HTTPException(400, "Modelo já existe nesta linha.")
+    finally:
+        conn.close()
+    registrar_auditoria(sessao.get("usuario", "?"), "catalogo_criado",
+                        alvo=f"{linha.strip()} / {modelo.strip()}")
+    return RedirectResponse("/catalogo-admin", status_code=303)
+
+@app.post("/catalogo-admin/{id_c}/toggle")
+def toggle_catalogo(id_c: int, request: Request, sessao: dict = Depends(require_admin),
+                    ativo: int = Form(...)):
+    conn = get_db()
+    row  = conn.execute("SELECT linha, modelo FROM catalogo WHERE id=?", (id_c,)).fetchone()
+    conn.execute("UPDATE catalogo SET ativo=? WHERE id=?", (ativo, id_c))
+    conn.commit()
+    conn.close()
+    registrar_auditoria(sessao.get("usuario", "?"),
+                        "catalogo_ativado" if ativo else "catalogo_desativado",
+                        alvo=f"{row['linha']} / {row['modelo']}" if row else str(id_c))
+    return RedirectResponse("/catalogo-admin", status_code=303)
+
+
 @app.get("/auditoria", response_class=HTMLResponse)
 def auditoria_page(request: Request, sessao: dict = Depends(require_admin),
                    pagina: int = 1, usuario_f: str = "", acao_f: str = ""):
@@ -540,13 +730,15 @@ def auditoria_page(request: Request, sessao: dict = Depends(require_admin),
     query  = "SELECT * FROM auditoria WHERE 1=1"
     params = []
     if usuario_f:
-        query += " AND usuario=?"; params.append(usuario_f)
+        query += " AND usuario=?";    params.append(usuario_f)
     if acao_f:
-        query += " AND acao LIKE ?"; params.append(f"%{acao_f}%")
+        query += " AND acao LIKE ?";  params.append(f"%{acao_f}%")
     query += " ORDER BY id DESC"
 
     rows     = conn.execute(query, params).fetchall()
-    usuarios = [r["usuario"] for r in conn.execute("SELECT DISTINCT usuario FROM auditoria ORDER BY usuario").fetchall()]
+    usuarios = [r["usuario"] for r in conn.execute(
+        "SELECT DISTINCT usuario FROM auditoria ORDER BY usuario"
+    ).fetchall()]
     conn.close()
 
     ITENS      = 30

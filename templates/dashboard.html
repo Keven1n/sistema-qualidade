@@ -4,50 +4,60 @@
 
 {% block content %}
 <div class="page-header">
- <h2> Dashboard de Qualidade</h2>
+ <h2>Dashboard de Qualidade</h2>
 </div>
 
+<form method="get" action="/" class="filter-bar" style="margin-bottom:1.5rem">
+ <label style="font-size:0.9rem;color:var(--color-text-secondary)">Período:</label>
+ <input type="date" name="data_ini" value="{{ data_ini }}" title="Data inicial"/>
+ <input type="date" name="data_fim" value="{{ data_fim }}" title="Data final"/>
+ <button type="submit" class="btn btn-primary">Filtrar</button>
+ {% if data_ini or data_fim %}
+ <a href="/" class="btn btn-secondary">Limpar</a>
+ {% endif %}
+</form>
+
 {% if total == 0 %}
- <div class="alert alert-info">Nenhuma inspeção registrada ainda.</div>
+ <div class="alert alert-info">Nenhuma inspeção encontrada para o período selecionado.</div>
 {% else %}
 
 <div class="kpi-grid">
  <div class="kpi-card">
- <div class="kpi-value">{{ total }}</div>
- <div class="kpi-label">Total de Inspeções</div>
+  <div class="kpi-value">{{ total }}</div>
+  <div class="kpi-label">Total de Inspeções</div>
  </div>
  <div class="kpi-card kpi-green">
- <div class="kpi-value">{{ aprovados }}</div>
- <div class="kpi-label">Aprovados</div>
- <div class="kpi-sub">{{ taxa_apr }}%</div>
+  <div class="kpi-value">{{ aprovados }}</div>
+  <div class="kpi-label">Aprovados</div>
+  <div class="kpi-sub">{{ taxa_apr }}%</div>
  </div>
  <div class="kpi-card kpi-red">
- <div class="kpi-value">{{ reprovados }}</div>
- <div class="kpi-label">Retrabalhos</div>
- <div class="kpi-sub">{{ taxa_repr }}%</div>
+  <div class="kpi-value">{{ reprovados }}</div>
+  <div class="kpi-label">Retrabalhos</div>
+  <div class="kpi-sub">{{ taxa_repr }}%</div>
  </div>
  <div class="kpi-card kpi-blue">
- <div class="kpi-value">{{ taxa_apr }}%</div>
- <div class="kpi-label">Taxa de Aprovação</div>
+  <div class="kpi-value">{{ taxa_apr }}%</div>
+  <div class="kpi-label">Taxa de Aprovação</div>
  </div>
 </div>
 
 <div class="charts-grid">
  <div class="chart-card">
- <h3> Inspeções por Status</h3>
- <canvas id="chartStatus"></canvas>
+  <h3>Inspeções por Status</h3>
+  <canvas id="chartStatus"></canvas>
  </div>
  <div class="chart-card">
- <h3> Retrabalhos por Soldador</h3>
- <canvas id="chartSoldador"></canvas>
+  <h3>Retrabalhos por Soldador</h3>
+  <canvas id="chartSoldador"></canvas>
  </div>
  <div class="chart-card">
- <h3> Inspeções por Modelo</h3>
- <canvas id="chartModelo"></canvas>
+  <h3>Inspeções por Modelo</h3>
+  <canvas id="chartModelo"></canvas>
  </div>
  <div class="chart-card">
- <h3> Defeitos mais Frequentes</h3>
- <canvas id="chartDefeitos"></canvas>
+  <h3>Defeitos mais Frequentes</h3>
+  <canvas id="chartDefeitos"></canvas>
  </div>
 </div>
 
@@ -63,21 +73,21 @@ function makeChart(id, labels, data, type="bar") {
  const ctx = document.getElementById(id);
  if (!ctx || !labels.length) return;
  new Chart(ctx, {
- type,
- data: {
- labels,
- datasets: [{ data, backgroundColor: COLORS, borderRadius: 6, borderWidth: 0 }]
- },
- options: {
- plugins: { legend: { display: false } },
- scales: type === "bar" ? { y: { beginAtZero: true, ticks: { precision: 0 } } } : {}
- }
+  type,
+  data: {
+   labels,
+   datasets: [{ data, backgroundColor: COLORS, borderRadius: 6, borderWidth: 0 }]
+  },
+  options: {
+   plugins: { legend: { display: false } },
+   scales: type === "bar" ? { y: { beginAtZero: true, ticks: { precision: 0 } } } : {}
+  }
  });
 }
 
-makeChart("chartStatus", {{ status_chart.keys()|list|tojson }}, {{ status_chart.values()|list|tojson }});
+makeChart("chartStatus",   {{ status_chart.keys()|list|tojson }},   {{ status_chart.values()|list|tojson }});
 makeChart("chartSoldador", {{ soldador_chart.keys()|list|tojson }}, {{ soldador_chart.values()|list|tojson }});
-makeChart("chartModelo", {{ modelo_chart.keys()|list|tojson }}, {{ modelo_chart.values()|list|tojson }});
+makeChart("chartModelo",   {{ modelo_chart.keys()|list|tojson }},   {{ modelo_chart.values()|list|tojson }});
 makeChart("chartDefeitos", {{ defeitos_chart.keys()|list|tojson }}, {{ defeitos_chart.values()|list|tojson }});
 </script>
 {% endblock %}

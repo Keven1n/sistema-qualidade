@@ -4,93 +4,108 @@
 
 {% block content %}
 <div class="page-header">
- <h2> Registrar Nova Inspeção</h2>
+ <h2>Registrar Nova Inspeção</h2>
 </div>
 
 {% if sessao.demo %}
-<div class="alert alert-warning"> Modo demonstração — salvamento desativado.</div>
+<div class="alert alert-warning">Modo demonstração — salvamento desativado.</div>
+{% endif %}
+
+{% if erro %}
+<div class="alert alert-error">{{ erro }}</div>
+{% endif %}
+
+{% if reinspeção_de and origem %}
+<div class="alert alert-info">
+ Reinspeção da O.S. <strong>{{ origem.os }}</strong> (registro #{{ reinspeção_de }}) — campos pré-preenchidos com os dados originais.
+</div>
 {% endif %}
 
 <form method="post" action="/nova" enctype="multipart/form-data" class="form-card">
 
- <div class="form-row">
- <div class="form-group">
- <label>Linha de Produção</label>
- <select name="linha" id="linha" onchange="atualizarModelos()" required>
- {% for linha in catalogo.keys() %}
- <option value="{{ linha }}">{{ linha }}</option>
- {% endfor %}
- </select>
- </div>
- <div class="form-group">
- <label>Modelo do Tanque</label>
- <select name="modelo" id="modelo" required></select>
- </div>
- </div>
+ {% if reinspeção_de %}
+ <input type="hidden" name="reinspeção_de" value="{{ reinspeção_de }}"/>
+ {% endif %}
 
  <div class="form-row">
- <div class="form-group">
- <label>Número da O.S. / Série</label>
- <input type="text" name="os_num" placeholder="Ex: 2024-0058" maxlength="50" required/>
- </div>
- <div class="form-group">
- <label>Data da Inspeção</label>
- <input type="date" name="data_inspecao" value="{{ today }}" required/>
- </div>
+  <div class="form-group">
+   <label>Linha de Produção</label>
+   <select name="linha" id="linha" onchange="atualizarModelos()" required>
+    {% for linha in catalogo.keys() %}
+    <option value="{{ linha }}">{{ linha }}</option>
+    {% endfor %}
+   </select>
+  </div>
+  <div class="form-group">
+   <label>Modelo do Tanque</label>
+   <select name="modelo" id="modelo" required></select>
+  </div>
  </div>
 
  <div class="form-row">
- <div class="form-group">
- <label>Soldador Responsável</label>
- <select name="soldador" required>
- <option>Carlos Silva</option>
- <option>João Souza</option>
- <option>Maria Oliveira</option>
- <option>Outro</option>
- </select>
- </div>
- <div class="form-group">
- <label>Processo de Solda</label>
- <select name="processo" required>
- <option>TIG Manual</option>
- <option>TIG Orbital</option>
- </select>
- </div>
+  <div class="form-group">
+   <label>Número da O.S. / Série</label>
+   <input type="text" name="os_num" placeholder="Ex: 2024-0058" maxlength="50" required
+          value="{{ origem.os if origem else '' }}"/>
+  </div>
+  <div class="form-group">
+   <label>Data da Inspeção</label>
+   <input type="date" name="data_inspecao" value="{{ today }}" required/>
+  </div>
  </div>
 
  <div class="form-row">
- <div class="form-group">
- <label>Resultado da Inspeção</label>
- <div class="radio-group">
- <label><input type="radio" name="status_ins" value="Aprovado" checked/> Aprovado</label>
- <label><input type="radio" name="status_ins" value="Reprovado / Retrabalho"/> Reprovado / Retrabalho</label>
+  <div class="form-group">
+   <label>Soldador Responsável</label>
+   <select name="soldador" required>
+    {% for s in soldadores %}
+    <option {% if origem and origem.soldador == s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+   </select>
+  </div>
+  <div class="form-group">
+   <label>Processo de Solda</label>
+   <select name="processo" required>
+    {% for p in processos %}
+    <option {% if origem and origem.processo == p %}selected{% endif %}>{{ p }}</option>
+    {% endfor %}
+   </select>
+  </div>
  </div>
- </div>
- <div class="form-group">
- <label>Defeitos Encontrados</label>
- <div class="checkbox-group">
- {% for d in ["Porosidade","Trinca","Falta de Fusão","Mordedura","Excesso de Reforço","Oxidação"] %}
- <label><input type="checkbox" name="defeitos" value="{{ d }}"/> {{ d }}</label>
- {% endfor %}
- </div>
- </div>
+
+ <div class="form-row">
+  <div class="form-group">
+   <label>Resultado da Inspeção</label>
+   <div class="radio-group">
+    <label><input type="radio" name="status_ins" value="Aprovado" checked/> Aprovado</label>
+    <label><input type="radio" name="status_ins" value="Reprovado / Retrabalho"/> Reprovado / Retrabalho</label>
+   </div>
+  </div>
+  <div class="form-group">
+   <label>Defeitos Encontrados</label>
+   <div class="checkbox-group">
+    {% for d in defeitos_opcoes %}
+    <label><input type="checkbox" name="defeitos" value="{{ d }}"/> {{ d }}</label>
+    {% endfor %}
+   </div>
+  </div>
  </div>
 
  <div class="form-group">
- <label>Observações Técnicas</label>
- <textarea name="obs" rows="3" maxlength="2000" placeholder="Ex: Solda de fechamento do costado..."></textarea>
+  <label>Observações Técnicas</label>
+  <textarea name="obs" rows="3" maxlength="2000" placeholder="Ex: Solda de fechamento do costado...">{{ origem.obs if origem else '' }}</textarea>
  </div>
 
  <div class="form-group">
- <label>Fotos da Solda (máx. 5MB por arquivo, JPG/PNG)</label>
- <input type="file" name="fotos" accept=".jpg,.jpeg,.png" multiple/>
+  <label>Fotos da Solda (máx. 5MB por arquivo, JPG/PNG)</label>
+  <input type="file" name="fotos" accept=".jpg,.jpeg,.png" multiple/>
  </div>
 
  <div class="form-actions">
- <button type="submit" class="btn btn-primary" {% if sessao.demo %}disabled{% endif %}>
- Salvar Registro
- </button>
- <a href="/" class="btn btn-secondary">Cancelar</a>
+  <button type="submit" class="btn btn-primary" {% if sessao.demo %}disabled{% endif %}>
+   Salvar Registro
+  </button>
+  <a href="/" class="btn btn-secondary">Cancelar</a>
  </div>
 
 </form>
@@ -98,22 +113,23 @@
 
 {% block scripts %}
 <script>
-const catalogo = {{ catalogo|tojson }};
+const catalogo     = {{ catalogo|tojson }};
+const modeloOrigem = "{{ origem.modelo if origem else '' }}";
 
 function atualizarModelos() {
- const linha = document.getElementById("linha").value;
+ const linha  = document.getElementById("linha").value;
  const select = document.getElementById("modelo");
  select.innerHTML = "";
  (catalogo[linha] || []).forEach(m => {
- const opt = document.createElement("option");
- opt.value = opt.textContent = m;
- select.appendChild(opt);
+  const opt = document.createElement("option");
+  opt.value = opt.textContent = m;
+  if (modeloOrigem && m === modeloOrigem) opt.selected = true;
+  select.appendChild(opt);
  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
  atualizarModelos();
- // Set today's date
  const d = document.querySelector('input[name="data_inspecao"]');
  if (d && !d.value) d.value = new Date().toISOString().split("T")[0];
 });

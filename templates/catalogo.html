@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% set active = "catalogo" %}
+{% block title %}Catálogo — Qualidade{% endblock %}
+
+{% block content %}
+<div class="page-header">
+ <h2>Catálogo de Modelos</h2>
+</div>
+
+<div class="two-col">
+
+ <div class="form-card">
+  <h3>Modelos Cadastrados</h3>
+  <div class="table-wrapper">
+   <table class="data-table">
+    <thead><tr><th>ID</th><th>Linha</th><th>Modelo</th><th>Status</th><th>Ação</th></tr></thead>
+    <tbody>
+    {% for item in itens %}
+    <tr>
+     <td>{{ item.id }}</td>
+     <td>{{ item.linha }}</td>
+     <td>{{ item.modelo }}</td>
+     <td>
+      <span class="badge {% if item.ativo %}badge-green{% else %}badge-red{% endif %}">
+       {% if item.ativo %}Ativo{% else %}Inativo{% endif %}
+      </span>
+     </td>
+     <td>
+      <form method="post" action="/catalogo-admin/{{ item.id }}/toggle" style="display:inline">
+       {% if item.ativo %}
+       <input type="hidden" name="ativo" value="0"/>
+       <button type="submit" class="btn-sm btn-delete">Desativar</button>
+       {% else %}
+       <input type="hidden" name="ativo" value="1"/>
+       <button type="submit" class="btn-sm btn-edit">Ativar</button>
+       {% endif %}
+      </form>
+     </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+   </table>
+  </div>
+ </div>
+
+ <div class="form-card">
+  <h3>Novo Modelo</h3>
+  <form method="post" action="/catalogo-admin/criar">
+   <div class="form-group">
+    <label>Linha de Produção</label>
+    <input type="text" name="linha" required placeholder="Ex: Linha Leite"/>
+   </div>
+   <div class="form-group">
+    <label>Modelo</label>
+    <input type="text" name="modelo" required placeholder="Ex: RA-100 - Resfriador Aberto"/>
+   </div>
+   <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Adicionar</button>
+   </div>
+  </form>
+ </div>
+
+</div>
+{% endblock %}
