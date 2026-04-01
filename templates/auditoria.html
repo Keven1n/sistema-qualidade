@@ -5,7 +5,6 @@
 {% block content %}
 <div class="page-header">
  <h2>Log de Auditoria</h2>
- <a href="/exportar-auditoria" class="btn btn-secondary">Exportar CSV</a>
 </div>
 
 <form method="get" action="/auditoria" class="filter-bar">
@@ -18,6 +17,11 @@
  <input type="text" name="acao_f" placeholder="Filtrar por ação..." value="{{ acao_f }}" style="flex:1;padding:0.4rem 0.75rem;border:1px solid var(--color-border-secondary);border-radius:6px"/>
  <button type="submit" class="btn btn-primary">Filtrar</button>
  <a href="/auditoria" class="btn btn-secondary">Limpar</a>
+
+ <a href="/exportar-auditoria" class="btn btn-secondary" style="margin-left: auto; border: 1px solid var(--success); color: var(--success); background: var(--success-bg); padding: 0.5rem 1rem;" title="Baixar logs do sistema">
+  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+  Exportar CSV
+ </a>
 </form>
 
 <div class="table-wrapper">
@@ -28,10 +32,10 @@
  <tbody>
  {% for r in rows %}
  <tr>
-  <td>{{ r.id }}</td>
-  <td style="white-space:nowrap">{{ r.momento }}</td>
-  <td><strong>{{ r.usuario }}</strong></td>
-  <td>
+  <td data-label="#">{{ r.id }}</td>
+  <td data-label="Data/Hora" style="white-space:nowrap">{{ r.momento }}</td>
+  <td data-label="Usuário"><strong>{{ r.usuario }}</strong></td>
+  <td data-label="Ação">
    {% set acao_cor = "" %}
    {% if "exclu" in r.acao or "bloqueado" in r.acao or "falhou" in r.acao %}
     {% set acao_cor = "badge-red" %}
@@ -42,8 +46,8 @@
    {% endif %}
    <span class="badge {{ acao_cor }}">{{ r.acao }}</span>
   </td>
-  <td>{{ r.alvo or "—" }}</td>
-  <td style="font-size:0.82rem;color:var(--color-text-secondary)">{{ r.detalhe or "—" }}</td>
+  <td data-label="Alvo">{{ r.alvo or "—" }}</td>
+  <td data-label="Detalhe" style="font-size:0.82rem;color:var(--color-text-secondary)">{{ r.detalhe or "—" }}</td>
  </tr>
  {% else %}
  <tr><td colspan="6" class="empty">Nenhum registro encontrado.</td></tr>

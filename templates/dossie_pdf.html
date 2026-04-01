@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Dossiê Gerencial ThermoLac</title>
+    <style>
+        body { font-family: 'Helvetica', 'Arial', sans-serif; font-size: 14px; margin: 0; padding: 20px 40px; color: #1e293b; background: white; line-height: 1.5; }
+        .cabecalho { text-align: center; border-bottom: 3px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px; }
+        .cabecalho h1 { margin: 0; color: #0f172a; font-size: 28px; letter-spacing: -1px; }
+        .cabecalho p { margin: 5px 0 0; color: #64748b; font-size: 14px; }
+        .kpi-row { display: flex; justify-content: space-between; margin-bottom: 30px; text-align: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 20px;}
+        .kpi-box { flex: 1; padding: 0 10px;}
+        .kpi-box h2 { font-size: 32px; margin: 0 0 5px 0; color: #0f172a; line-height: 1;}
+        .kpi-box span { font-size: 11px; color: #64748b; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;}
+        .charts { width: 100%; text-align: center; font-size: 0; }
+        .chart-box { width: 100%; display: block; margin: 0 auto 30px auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box; background: #f8fafc; }
+        .chart-box h3 { font-size: 16px; color: #1e293b; margin-top: 0; margin-bottom: 20px; border-bottom: 2px solid #06b6d4; display: inline-block; padding-bottom: 6px;}
+        .chart-box img { width: 100%; height: auto; display: block; margin: 0 auto;}
+        .rodape { margin-top: 40px; text-align: center; font-size: 11px; color: #94a3b8; padding-top: 15px; border-top: 1px solid #f1f5f9; }
+    </style>
+</head>
+<body>
+
+    <div class="cabecalho">
+        <h1>THERMOLAC</h1>
+        <p style="text-transform: uppercase; font-weight: bold; font-size: 12px; letter-spacing: 1px;">Dossiê Consolidado de Qualidade</p>
+        <p>Período Base: <strong>{{ periodo }}</strong> &nbsp;|&nbsp; Emitido sob demanda em: {{ data_hoje }}</p>
+    </div>
+
+    <div class="kpi-row">
+        <div class="kpi-box"><h2>{{ total }}</h2><span>Total Inspeções</span></div>
+        <div class="kpi-box"><h2 style="color: #10b981;">{{ aprovados }}</h2><span style="color: #059669;">Aprovados</span></div>
+        <div class="kpi-box"><h2 style="color: #ef4444;">{{ reprovados }}</h2><span style="color: #dc2626;">Retrabalhos</span></div>
+        <div class="kpi-box"><h2 style="color: #06b6d4;">{{ taxa_apr }}%</h2><span style="color: #0891b2;">Taxa de Aprovação</span></div>
+    </div>
+
+    <div class="charts">
+        <div class="chart-box" style="page-break-inside: avoid;">
+            <h3>Inspeções por Status</h3>
+            {% if c_status %}<img src="{{ c_status }}" alt="Indisponível">{% endif %}
+        </div>
+        <div class="chart-box" style="page-break-inside: avoid;">
+            <h3>Índice de Retrabalho por Soldador</h3>
+            {% if c_soldador %}<img src="{{ c_soldador }}" alt="Indisponível">{% endif %}
+        </div>
+        <div class="chart-box" style="page-break-inside: avoid;">
+            <h3>Inspeções por Modelo de Equipamento</h3>
+            {% if c_modelo %}<img src="{{ c_modelo }}" alt="Indisponível">{% endif %}
+        </div>
+        <div class="chart-box" style="page-break-inside: avoid;">
+            <h3>Frequência Absoluta de Defeitos</h3>
+            {% if c_defeitos %}<img src="{{ c_defeitos }}" alt="Indisponível">{% endif %}
+        </div>
+    </div>
+    
+    <div class="rodape">Documento eletrônico e estatístico gerado instantaneamente via Engine ThermoLac Analytics • Proibida reprodução não-autorizada.</div>
+
+</body>
+</html>

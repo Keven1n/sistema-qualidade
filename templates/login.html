@@ -3,15 +3,17 @@
 <head>
  <meta charset="UTF-8"/>
  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
- <title>Login — Sistema de Qualidade</title>
- <link rel="stylesheet" href="/static/css/style.css"/>
+ <title>Login — ThermoLac</title>
+ <link rel="stylesheet" href="/static/css/style.css?v=3.4"/>
 </head>
 <body class="login-body">
  <div class="login-card">
- <div class="login-header">
- <div class="login-icon"></div>
- <h1>Sistema de Qualidade</h1>
- <p>Controle de Soldagem</p>
+  <div class="login-header">
+  <div class="brand-logo" style="margin: 0 auto 1.5rem; width: 88px; height: 88px; border-radius: 16px;">
+    <img src="/static/img/logo.png" alt="ThermoLac Logo" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'88\' height=\'88\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%230ea5e9\' stroke-width=\'1.5\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><rect x=\'2\' y=\'8\' width=\'20\' height=\'8\' rx=\'2\' ry=\'2\'></rect><path d=\'M6 12h0\'></path><path d=\'M10 12h0\'></path><path d=\'M14 12h0\'></path><path d=\'M18 12h0\'></path><path d=\'M2 10V6a2 2 0 012-2h16a2 2 0 012 2v4\'></path><path d=\'M8 4l2-2 4 4 2-2\'></path></svg>'">
+  </div>
+  <h1>ThermoLac</h1>
+  <p>Gestão e Controle de Qualidade</p>
  </div>
 
  {% if erro %}

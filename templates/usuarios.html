@@ -19,10 +19,10 @@
  <tbody>
  {% for u in users %}
  <tr>
-  <td>{{ u.id }}</td>
-  <td>{{ u.usuario }}</td>
-  <td>{{ u.nome }}</td>
-  <td>
+  <td data-label="ID">{{ u.id }}</td>
+  <td data-label="Login">{{ u.usuario }}</td>
+  <td data-label="Nome">{{ u.nome }}</td>
+  <td data-label="Papel">
    <form method="post" action="/usuarios/{{ u.id }}/papel" style="display:inline">
     <select name="novo_papel" onchange="this.form.submit()" style="font-size:0.85rem;padding:2px 4px">
      {% for p in papeis %}
@@ -31,12 +31,12 @@
     </select>
    </form>
   </td>
-  <td>
+  <td data-label="Status">
    <span class="badge {% if u.ativo %}badge-green{% else %}badge-red{% endif %}">
     {% if u.ativo %}Ativo{% else %}Inativo{% endif %}
    </span>
   </td>
-  <td>
+  <td data-label="Ações">
    <form method="post" action="/usuarios/{{ u.id }}/toggle" style="display:inline">
     {% if u.ativo %}
     <input type="hidden" name="ativo" value="0"/>

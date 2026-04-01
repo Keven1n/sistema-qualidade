@@ -1,19 +1,30 @@
-version: "3.9"
-
-volumes:
-  app_data:
-
 services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminpassword
+      POSTGRES_DB: qualidade
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432" # Permite conectar ao banco via DBeaver/PgAdmin se quiser
+
   app:
     build: .
-    ports:
-      - "8080:8000"
+    depends_on:
+      - db
     volumes:
       - app_data:/data
-      - ./app:/app/app          # mapeia a pasta local direto no container
+      - ./app:/app/app
       - ./templates:/app/templates
-      # Monta pasta local para backups acessíveis fora do container
+      - ./static:/app/static
       - ./backups:/data/backups
+      - ./tests:/app/tests
+    environment:
+      # A MÁGICA ACONTECE AQUI: Esta variável faz o app esquecer o SQLite e usar o Postgres!
+      - DATABASE_URL=postgresql://admin:adminpassword@db:5432/qualidade
     env_file:
       - .env
     restart: unless-stopped
@@ -23,3 +34,26 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    volumes:
+      - uptime_kuma_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  app_data:
+  postgres_data: # Novo volume para não perder os dados do Postgres ao reiniciar
+  uptime_kuma_data:

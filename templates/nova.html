@@ -45,8 +45,15 @@
  <div class="form-row">
   <div class="form-group">
    <label>Número da O.S. / Série</label>
-   <input type="text" name="os_num" placeholder="Ex: 2024-0058" maxlength="50" required
-          value="{{ origem.os if origem else '' }}"/>
+   <div style="display: flex; gap: 10px;">
+    <input type="text" name="os_num" id="os_num" placeholder="Ex: 2024-0058" maxlength="50" required
+           value="{{ origem.os if origem else '' }}" style="flex: 1;"/>
+    <button type="button" id="btn-scan-qr" class="btn btn-secondary" style="border: 1px solid var(--brand-cyan); color: var(--brand-cyan); background: var(--brand-cyan-light); padding: 0 15px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; gap: 8px;" title="Câmera / Escanear QR">
+     <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 7V4h3"></path><path d="M20 7V4h-3"></path><path d="M4 17v3h3"></path><path d="M20 17v3h-3"></path><circle cx="12" cy="12" r="3"></circle></svg>
+     Ler QR
+    </button>
+   </div>
+   <div id="qr-reader" style="display: none; width: 100%; margin-top: 10px; border-radius: 8px; overflow: hidden; background: #000;"></div>
   </div>
   <div class="form-group">
    <label>Data da Inspeção</label>
@@ -101,6 +108,15 @@
   <input type="file" name="fotos" accept=".jpg,.jpeg,.png" multiple/>
  </div>
 
+ <div class="form-group">
+  <label>Assinatura Eletrônica do Inspetor</label>
+  <div style="border: 2px dashed #cbd5e1; border-radius: 8px; background: #f8fafc; width: 100%; max-width: 500px; touch-action: none;">
+   <canvas id="signature-pad" width="500" height="200" style="width: 100%; height: 200px; display: block; cursor: crosshair;"></canvas>
+  </div>
+  <button type="button" id="btn-clear-sig" class="btn btn-secondary" style="margin-top: 10px; padding: 4px 12px; font-size: 0.9rem;">Limpar Assinatura</button>
+  <input type="hidden" name="assinatura_b64" id="assinatura_b64">
+ </div>
+
  <div class="form-actions">
   <button type="submit" class="btn btn-primary" {% if sessao.demo %}disabled{% endif %}>
    Salvar Registro
@@ -112,8 +128,12 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script id="catalogo-data" type="application/json">
+{{ catalogo|tojson|safe }}
+</script>
 <script>
-const catalogo     = {{ catalogo|tojson }};
+const catalogo     = JSON.parse(document.getElementById("catalogo-data").textContent);
 const modeloOrigem = "{{ origem.modelo if origem else '' }}";
 
 function atualizarModelos() {
@@ -132,6 +152,130 @@ document.addEventListener("DOMContentLoaded", () => {
  atualizarModelos();
  const d = document.querySelector('input[name="data_inspecao"]');
  if (d && !d.value) d.value = new Date().toISOString().split("T")[0];
+
+ const btnScan = document.getElementById('btn-scan-qr');
+ const qrReader = document.getElementById('qr-reader');
+ const osInput = document.getElementById('os_num');
+ let isScanning = false;
+ let html5QrCode = null;
+
+ if (btnScan) {
+  btnScan.addEventListener('click', () => {
+   if (!isScanning) {
+    qrReader.style.display = 'block';
+    btnScan.textContent = '❌ Fechar';
+    isScanning = true;
+    
+    if (!html5QrCode) {
+     html5QrCode = new Html5Qrcode("qr-reader");
+    }
+    
+    html5QrCode.start(
+     { facingMode: "environment" }, 
+     { fps: 10, qrbox: { width: 250, height: 250 } },
+     (decodedText, decodedResult) => {
+      // success
+      osInput.value = decodedText;
+      html5QrCode.stop().then(() => {
+       qrReader.style.display = 'none';
+       btnScan.textContent = '📷 Ler QR';
+       isScanning = false;
+       osInput.style.backgroundColor = '#e8f5e9';
+       setTimeout(() => osInput.style.backgroundColor = '', 1000);
+      });
+     },
+     (errorMessage) => {
+      // ignora os erros frame-a-frame quando não achar QR Code
+     }
+    ).catch(err => {
+     console.error("Erro ao iniciar a câmera", err);
+     alert("Não foi possível acessar a câmera do dispositivo.");
+     qrReader.style.display = 'none';
+     btnScan.textContent = '📷 Ler QR';
+     isScanning = false;
+    });
+   } else {
+    html5QrCode.stop().then(() => {
+     qrReader.style.display = 'none';
+     btnScan.textContent = '📷 Ler QR';
+     isScanning = false;
+    }).catch(err => console.error("Erro ao parar a câmera", err));
+   }
+  });
+ }
+
+ // Assinatura Digital
+ const canvas = document.getElementById('signature-pad');
+ const ctx = canvas.getContext('2d');
+ let isDrawing = false;
+ let hasSignature = false;
+
+ function initCanvas() {
+   const ratio = Math.max(window.devicePixelRatio || 1, 1);
+   canvas.width = canvas.offsetWidth * ratio;
+   canvas.height = canvas.offsetHeight * ratio;
+   ctx.scale(ratio, ratio);
+   ctx.lineWidth = 3;
+   ctx.lineCap = 'round';
+   ctx.lineJoin = 'round';
+   ctx.strokeStyle = '#0f172a';
+ }
+ // Precisa de um pequeno delay para garantir que o layout renderizou
+ setTimeout(initCanvas, 100);
+
+ function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+  const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+  return { x: clientX - rect.left, y: clientY - rect.top };
+ }
+
+ function startDrawing(e) {
+  isDrawing = true;
+  hasSignature = true;
+  const pos = getPos(e);
+  ctx.beginPath();
+  ctx.moveTo(pos.x, pos.y);
+  draw(e);
+ }
+
+ function stopDrawing() {
+  isDrawing = false;
+  ctx.beginPath();
+ }
+
+ function draw(e) {
+  if (!isDrawing) return;
+  e.preventDefault(); // Impede rolagem da página no touch
+  const pos = getPos(e);
+  ctx.lineTo(pos.x, pos.y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(pos.x, pos.y);
+ }
+
+ canvas.addEventListener('mousedown', startDrawing);
+ canvas.addEventListener('mousemove', draw);
+ canvas.addEventListener('mouseup', stopDrawing);
+ canvas.addEventListener('mouseout', stopDrawing);
+
+ canvas.addEventListener('touchstart', startDrawing, {passive: false});
+ canvas.addEventListener('touchmove', draw, {passive: false});
+ canvas.addEventListener('touchend', stopDrawing);
+
+ document.getElementById('btn-clear-sig').addEventListener('click', () => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  hasSignature = false;
+  ctx.beginPath();
+ });
+
+ const form = document.querySelector('form.form-card');
+ form.addEventListener('submit', (e) => {
+  if (hasSignature) {
+   document.getElementById('assinatura_b64').value = canvas.toDataURL('image/png');
+  }
+ });
+
 });
 </script>
 {% endblock %}

@@ -17,15 +17,15 @@
     <tbody>
     {% for item in itens %}
     <tr>
-     <td>{{ item.id }}</td>
-     <td>{{ item.linha }}</td>
-     <td>{{ item.modelo }}</td>
-     <td>
+     <td data-label="ID">{{ item.id }}</td>
+     <td data-label="Linha">{{ item.linha }}</td>
+     <td data-label="Modelo">{{ item.modelo }}</td>
+     <td data-label="Status">
       <span class="badge {% if item.ativo %}badge-green{% else %}badge-red{% endif %}">
        {% if item.ativo %}Ativo{% else %}Inativo{% endif %}
       </span>
      </td>
-     <td>
+     <td data-label="Ação">
       <form method="post" action="/catalogo-admin/{{ item.id }}/toggle" style="display:inline">
        {% if item.ativo %}
        <input type="hidden" name="ativo" value="0"/>

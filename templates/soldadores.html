@@ -17,14 +17,14 @@
     <tbody>
     {% for s in soldadores %}
     <tr>
-     <td>{{ s.id }}</td>
-     <td>{{ s.nome }}</td>
-     <td>
+     <td data-label="ID">{{ s.id }}</td>
+     <td data-label="Nome">{{ s.nome }}</td>
+     <td data-label="Status">
       <span class="badge {% if s.ativo %}badge-green{% else %}badge-red{% endif %}">
        {% if s.ativo %}Ativo{% else %}Inativo{% endif %}
       </span>
      </td>
-     <td>
+     <td data-label="Ação">
       <form method="post" action="/soldadores/{{ s.id }}/toggle" style="display:inline">
        {% if s.ativo %}
        <input type="hidden" name="ativo" value="0"/>

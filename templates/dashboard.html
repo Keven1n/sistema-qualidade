@@ -7,14 +7,19 @@
  <h2>Dashboard de Qualidade</h2>
 </div>
 
-<form method="get" action="/" class="filter-bar" style="margin-bottom:1.5rem">
- <label style="font-size:0.9rem;color:var(--color-text-secondary)">Período:</label>
+<form method="get" action="/" class="filter-bar">
+ <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-2);">Período:</span>
  <input type="date" name="data_ini" value="{{ data_ini }}" title="Data inicial"/>
  <input type="date" name="data_fim" value="{{ data_fim }}" title="Data final"/>
- <button type="submit" class="btn btn-primary">Filtrar</button>
+ <button type="submit" class="btn btn-primary" title="Filtrar dados da tela">Filtrar</button>
  {% if data_ini or data_fim %}
  <a href="/" class="btn btn-secondary">Limpar</a>
  {% endif %}
+
+ <button type="button" class="btn btn-secondary" onclick="exportarDossie()" style="margin-left: auto; border: 1px solid var(--brand-cyan); color: var(--brand-cyan); background: var(--brand-cyan-light); padding: 0.5rem 1rem;" title="Baixar relatório deste período">
+  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+  Exportar Dossiê
+ </button>
 </form>
 
 {% if total == 0 %}
@@ -45,19 +50,27 @@
 <div class="charts-grid">
  <div class="chart-card">
   <h3>Inspeções por Status</h3>
-  <canvas id="chartStatus"></canvas>
+  <div style="position: relative; height: 260px; width: 100%;">
+   <canvas id="chartStatus"></canvas>
+  </div>
  </div>
  <div class="chart-card">
   <h3>Retrabalhos por Soldador</h3>
-  <canvas id="chartSoldador"></canvas>
+  <div style="position: relative; height: 260px; width: 100%;">
+   <canvas id="chartSoldador"></canvas>
+  </div>
  </div>
  <div class="chart-card">
   <h3>Inspeções por Modelo</h3>
-  <canvas id="chartModelo"></canvas>
+  <div style="position: relative; height: 260px; width: 100%;">
+   <canvas id="chartModelo"></canvas>
+  </div>
  </div>
  <div class="chart-card">
   <h3>Defeitos mais Frequentes</h3>
-  <canvas id="chartDefeitos"></canvas>
+  <div style="position: relative; height: 260px; width: 100%;">
+   <canvas id="chartDefeitos"></canvas>
+  </div>
  </div>
 </div>
 
@@ -65,29 +78,133 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Data blocks to avoid JS linting errors -->
+<div id="data-status-keys" style="display:none;">{{ status_chart.keys()|list|tojson }}</div>
+<div id="data-status-vals" style="display:none;">{{ status_chart.values()|list|tojson }}</div>
+<div id="data-soldador-keys" style="display:none;">{{ soldador_chart.keys()|list|tojson }}</div>
+<div id="data-soldador-vals" style="display:none;">{{ soldador_chart.values()|list|tojson }}</div>
+<div id="data-modelo-keys" style="display:none;">{{ modelo_chart.keys()|list|tojson }}</div>
+<div id="data-modelo-vals" style="display:none;">{{ modelo_chart.values()|list|tojson }}</div>
+<div id="data-defeitos-keys" style="display:none;">{{ defeitos_chart.keys()|list|tojson }}</div>
+<div id="data-defeitos-vals" style="display:none;">{{ defeitos_chart.values()|list|tojson }}</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const COLORS = ["#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#f97316","#84cc16"];
+Chart.defaults.font.family = 'Outfit, Inter, sans-serif';
+Chart.defaults.color = '#64748b';
+Chart.defaults.scale.grid.color = 'rgba(0,0,0,0.04)';
+Chart.defaults.maintainAspectRatio = false;
 
-function makeChart(id, labels, data, type="bar") {
- const ctx = document.getElementById(id);
- if (!ctx || !labels.length) return;
- new Chart(ctx, {
-  type,
-  data: {
-   labels,
-   datasets: [{ data, backgroundColor: COLORS, borderRadius: 6, borderWidth: 0 }]
-  },
-  options: {
-   plugins: { legend: { display: false } },
-   scales: type === "bar" ? { y: { beginAtZero: true, ticks: { precision: 0 } } } : {}
-  }
- });
+const COLORS_BLUE = ["#06b6d4", "#0ea5e9", "#3b82f6", "#8b5cf6", "#6366f1", "#3b82f6", "#0284c7"];
+const COLORS_DARK = ["#0f172a", "#1e293b", "#334155", "#475569"];
+
+function getChartData(keysId, valsId) {
+  const l = document.getElementById(keysId).textContent;
+  const d = document.getElementById(valsId).textContent;
+  return { labels: JSON.parse(l || "[]"), data: JSON.parse(d || "[]") };
 }
 
-makeChart("chartStatus",   {{ status_chart.keys()|list|tojson }},   {{ status_chart.values()|list|tojson }});
-makeChart("chartSoldador", {{ soldador_chart.keys()|list|tojson }}, {{ soldador_chart.values()|list|tojson }});
-makeChart("chartModelo",   {{ modelo_chart.keys()|list|tojson }},   {{ modelo_chart.values()|list|tojson }});
-makeChart("chartDefeitos", {{ defeitos_chart.keys()|list|tojson }}, {{ defeitos_chart.values()|list|tojson }});
+// 1. Status 
+const statusData = getChartData("data-status-keys", "data-status-vals");
+if (statusData.labels.length) {
+  const bgColors = statusData.labels.map(l => {
+    if (l === 'Aprovado') return '#10b981';
+    if (l.includes('Reprovado')) return '#ef4444';
+    return '#06b6d4';
+  });
+  new Chart(document.getElementById("chartStatus"), {
+    type: 'doughnut',
+    data: { labels: statusData.labels, datasets: [{ data: statusData.data, backgroundColor: bgColors, borderWidth: 0, hoverOffset: 6 }] },
+    options: { cutout: '75%', plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } } } }
+  });
+}
+
+// 2. Soldadores
+const soldadorData = getChartData("data-soldador-keys", "data-soldador-vals");
+if (soldadorData.labels.length) {
+  new Chart(document.getElementById("chartSoldador"), {
+    type: 'bar',
+    data: { labels: soldadorData.labels, datasets: [{ data: soldadorData.data, backgroundColor: COLORS_BLUE[0], borderRadius: 6, maxBarThickness: 45 }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } }
+  });
+}
+
+// 3. Modelos
+const modeloData = getChartData("data-modelo-keys", "data-modelo-vals");
+if (modeloData.labels.length) {
+  new Chart(document.getElementById("chartModelo"), {
+    type: 'doughnut',
+    data: { labels: modeloData.labels, datasets: [{ data: modeloData.data, backgroundColor: COLORS_BLUE, borderWidth: 0, hoverOffset: 6 }] },
+    options: { cutout: '65%', plugins: { legend: { position: 'right', labels: { usePointStyle: true } } } }
+  });
+}
+
+// 4. Defeitos
+const defeitosData = getChartData("data-defeitos-keys", "data-defeitos-vals");
+if (defeitosData.labels.length) {
+  new Chart(document.getElementById("chartDefeitos"), {
+    type: 'bar',
+    data: { labels: defeitosData.labels, datasets: [{ data: defeitosData.data, backgroundColor: COLORS_DARK, borderRadius: 4, maxBarThickness: 30 }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } }, y: { grid: { display: false } } } }
+  });
+}
+
+function exportarDossie() {
+  const btn = document.querySelector('.page-header .btn');
+  const txtOriginal = btn.innerHTML;
+  btn.innerHTML = '⏳ Preparando Dossiê...';
+  btn.disabled = true;
+
+  setTimeout(() => {
+    const getB64 = (id) => {
+      const c = document.getElementById(id);
+      if (!c) return '';
+      // Prevenção de fundo transparente para bibliotecas de renderização em PDF
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = c.width; tempCanvas.height = c.height;
+      const tCtx = tempCanvas.getContext("2d");
+      tCtx.fillStyle = "#ffffff";
+      tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+      tCtx.drawImage(c, 0, 0);
+      return tempCanvas.toDataURL("image/png");
+    };
+
+    const b1 = getB64('chartStatus');
+    const b2 = getB64('chartSoldador');
+    const b3 = getB64('chartModelo');
+    const b4 = getB64('chartDefeitos');
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/dashboard/exportar-pdf';
+    form.target = '_blank';
+
+    const periodFields = [
+      { n: 'data_ini', v: document.querySelector('input[name="data_ini"]').value },
+      { n: 'data_fim', v: document.querySelector('input[name="data_fim"]').value },
+      { n: 'c_status', v: b1 },
+      { n: 'c_soldador', v: b2 },
+      { n: 'c_modelo', v: b3 },
+      { n: 'c_defeitos', v: b4 }
+    ];
+
+    periodFields.forEach(p => {
+      const i = document.createElement('input');
+      i.type = 'hidden';
+      i.name = p.n;
+      i.value = p.v;
+      form.appendChild(i);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+    
+    setTimeout(() => {
+      document.body.removeChild(form);
+      btn.innerHTML = txtOriginal;
+      btn.disabled = false;
+    }, 1500);
+  }, 300);
+}
 </script>
 {% endblock %}
