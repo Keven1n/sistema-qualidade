@@ -144,8 +144,7 @@ Cadastro e gerenciamento dos soldadores da fábrica. Centraliza os nomes dos pro
 
 Administração das linhas de produção e seus respectivos modelos de tanques. Define quais equipamentos estão disponíveis para seleção no formulário de nova inspeção, mantendo o catálogo sempre atualizado com a realidade da fábrica.
 
-<img width="1920" height="998" alt="image" src="https://github.com/user-attachments/assets/94ade6ec-ce0b-4c09-9ec3-7dc2b30f3dd4" />
-
+<img width="1920" height="998" alt="image" src="https://github.com/user-attachments/assets/80254347-c115-48fb-b12e-74dc93ecb4b1" />
 
 ---
 
