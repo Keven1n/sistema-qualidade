@@ -7,6 +7,8 @@
 ![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?style=flat&logo=pwa&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat)
 
+### 🌐 [Acessar Demo ao Vivo](https://sistema-qualidade-production.up.railway.app)
+
 ---
 
 ## Sobre o Projeto
@@ -125,6 +127,14 @@ Registros com filtros avançados, geração de laudos PDF e reinspeção vincula
 Ativação/desativação de contas e criação de novos usuários com níveis de permissão.
 
 <img width="1919" height="959" alt="Area de Usuarios" src="https://github.com/user-attachments/assets/b67cac6d-638e-4388-a1a3-16ec11d286b5" />
+
+---
+
+## Demo Online
+
+> Acesse a versão de demonstração em: **[sistema-qualidade-production.up.railway.app](https://sistema-qualidade-production.up.railway.app)**
+>
+> Utilize o **Modo Demonstração** na tela de login para navegar pelo sistema sem necessidade de cadastro.
 
 ---
 
