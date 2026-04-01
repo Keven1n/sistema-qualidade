@@ -2,7 +2,7 @@
   "name": "ThermoLac Inspection Quality",
   "short_name": "ThermoLac",
   "description": "Sistema de Gestão e Controle de Qualidade ThermoLac",
-  "start_url": "/dashboard",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#06b6d4",
