@@ -2,13 +2,18 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Adicionamos o postgresql-client para podermos executar o pg_dump nos backups
+# Dependencias de sistema: backup (pg_dump), cron e WeasyPrint (cairo/pango)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     cron \
     gcc \
     libpq-dev \
     postgresql-client \
-    wkhtmltopdf \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf-2.0-0 \
+    libffi-dev \
+    shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
