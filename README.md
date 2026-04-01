@@ -102,31 +102,50 @@ O sistema oferece rastreabilidade total do processo de qualidade: desde o regist
 
 Tela segura de autenticação com modo demonstração (visitante) para acesso somente leitura.
 
-<img width="1919" height="956" alt="Login" src="https://github.com/user-attachments/assets/af9217f3-c67f-463b-83e2-82fd601f291d" />
+<img width="1920" height="998" alt="image" src="https://github.com/user-attachments/assets/805d1333-56ce-49b4-bd98-0a0bbc45c5aa" />
 
 **Dashboard**
 
 Painel analítico com KPIs, gráficos interativos e exportação de dossiê em PDF.
 
-<img width="1918" height="957" alt="Dashboard" src="https://github.com/user-attachments/assets/acc47766-55b8-4a39-807c-71451abbc641" />
+<img width="1920" height="998" alt="image" src="https://github.com/user-attachments/assets/8fb0a52d-86a7-48b6-8fec-ac7780da9463" />
 
 **Nova Inspeção**
 
 Formulário com seleção de linha/modelo, leitor de QR Code, upload de fotos e assinatura digital.
 
-<img width="1917" height="955" alt="Nova Inspeção" src="https://github.com/user-attachments/assets/d76d3029-c09f-4ebc-976b-e7f928ad015a" />
+<img width="1920" height="998" alt="image" src="https://github.com/user-attachments/assets/47ed8975-578e-40cd-829b-c27ae79f42c7" />
 
 **Histórico de Inspeções**
 
 Registros com filtros avançados, geração de laudos PDF e reinspeção vinculada.
 
-<img width="1917" height="949" alt="Historico Inspeções" src="https://github.com/user-attachments/assets/92ba645d-4699-43ed-bdad-b5ccad353d15" />
+<img width="1920" height="998" alt="image" src="https://github.com/user-attachments/assets/b9daade2-551e-4a95-97be-2d8e2ee6cf83" />
 
 **Gestão de Usuários**
 
 Ativação/desativação de contas e criação de novos usuários com níveis de permissão.
 
-<img width="1919" height="959" alt="Area de Usuarios" src="https://github.com/user-attachments/assets/b67cac6d-638e-4388-a1a3-16ec11d286b5" />
+<img width="1920" height="998" alt="image" src="https://github.com/user-attachments/assets/6e7b7d8e-8c35-4d81-aaa3-41d52fe87c12" />
+
+**Auditoria**
+
+Registro cronológico de todas as ações realizadas no sistema (login, logout, criação de inspeções, alterações de cadastro). Permite filtrar por usuário e tipo de ação, com exportação completa em CSV para conformidade e rastreabilidade.
+
+<img width="1920" height="998" alt="image" src="https://github.com/user-attachments/assets/65994231-ace7-49c1-82dc-71becd9fe45a" />
+
+**Soldadores**
+
+Cadastro e gerenciamento dos soldadores da fábrica. Centraliza os nomes dos profissionais que aparecem nos formulários de inspeção, garantindo padronização e evitando duplicidades no registro das O.S.
+
+<img width="1920" height="998" alt="image" src="https://github.com/user-attachments/assets/ccd709c9-7cda-4cce-aedc-c3db16b2e530" />
+
+**Catálogo de Modelos**
+
+Administração das linhas de produção e seus respectivos modelos de tanques. Define quais equipamentos estão disponíveis para seleção no formulário de nova inspeção, mantendo o catálogo sempre atualizado com a realidade da fábrica.
+
+<img width="1920" height="998" alt="image" src="https://github.com/user-attachments/assets/94ade6ec-ce0b-4c09-9ec3-7dc2b30f3dd4" />
+
 
 ---
 
