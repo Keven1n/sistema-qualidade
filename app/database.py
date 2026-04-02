@@ -7,7 +7,14 @@ DB_FILE = os.getenv("DB_FILE", "/data/dados_inspecoes.db")
 
 # A grande jogada: se tivermos a variável DATABASE_URL (que usaremos com Postgres), 
 # ele usa, senão, faz fallback para o SQLite que você já tem.
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{DB_FILE}")
+db_url = os.getenv("DATABASE_URL", f"sqlite:///{DB_FILE}")
+
+# Correção obrigatória para cloud (Railway/Heroku):
+# O SQLAlchemy moderno (>=1.4) exige 'postgresql://', mas o Railway gera 'postgres://'
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+SQLALCHEMY_DATABASE_URL = db_url
 
 # Argumentos específicos para o SQLite não travar com múltiplas threads
 connect_args = {"check_same_thread": False} if SQLALCHEMY_DATABASE_URL.startswith("sqlite") else {}
