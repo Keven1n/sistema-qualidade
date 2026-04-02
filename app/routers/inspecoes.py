@@ -162,7 +162,7 @@ def exportar_pdf(id_reg: int, request: Request, sessao: dict = Depends(get_sessa
     })
     
     # WeasyPrint engine converte HTML + Imagens file:// locais em PDF vetorial
-    pdf_bytes = HTML(string=html_content).write_pdf()
+    pdf_bytes = HTML(string=html_content, base_url="file:///").write_pdf()
     
     registrar_auditoria(sessao.get("usuario", "?"), "exportou_pdf", alvo=f"inspecao#{id_reg}", detalhe=f"O.S: {row.os}")
     
@@ -206,7 +206,7 @@ def exportar_dashboard_dossie(
         "c_status": c_status, "c_soldador": c_soldador, "c_modelo": c_modelo, "c_defeitos": c_defeitos
     })
     
-    pdf_bytes = HTML(string=html_content).write_pdf()
+    pdf_bytes = HTML(string=html_content, base_url="file:///").write_pdf()
     registrar_auditoria(sessao.get("usuario", "?"), "exportou_dossie")
     return Response(
         content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": 'attachment; filename="ThermoLac_Dossie_Mensal.pdf"'}
