@@ -5,6 +5,7 @@ import io
 from datetime import datetime
 from collections import Counter
 from typing import Optional
+import traceback
 
 from fastapi import APIRouter, Request, Form, UploadFile, File, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse, Response
@@ -162,7 +163,10 @@ def exportar_pdf(id_reg: int, request: Request, sessao: dict = Depends(get_sessa
     })
     
     # WeasyPrint engine converte HTML + Imagens file:// locais em PDF vetorial
-    pdf_bytes = HTML(string=html_content, base_url="file:///").write_pdf()
+    try:
+        pdf_bytes = HTML(string=html_content, base_url="file:///").write_pdf()
+    except Exception as e:
+        return Response(content="ERRO NO WEASYPRINT:\n" + traceback.format_exc(), status_code=500, media_type="text/plain")
     
     registrar_auditoria(sessao.get("usuario", "?"), "exportou_pdf", alvo=f"inspecao#{id_reg}", detalhe=f"O.S: {row.os}")
     
