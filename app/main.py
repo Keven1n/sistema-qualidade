@@ -52,7 +52,7 @@ def startup():
         # Garante o usuário lucas (Admin default) via variável de ambiente
         HASH_KEVIN = os.getenv("HASH_KEVIN", "").strip().strip('"\'').strip()
         if HASH_KEVIN.startswith('$2b$') and len(HASH_KEVIN) >= 59:
-            admin = db.query(Usuario).filter(Usuario.usuario == 'lucas').first()
+            admin = db.query(Usuario).filter(Usuario.usuario == 'kevin').first()
             if not admin:
                 db.add(Usuario(usuario='kevin', nome='Kevin', hash_senha=HASH_KEVIN, papel='admin'))
             else:
