@@ -22,7 +22,7 @@ PAPEIS_OK   = {"admin", "inspetor", "visitante"}
 
 def criar_ou_atualizar(usuario: str, nome: str, senha: str, papel: str = "inspetor"):
     if papel not in PAPEIS_OK:
-        print(f"❌ Papel inválido: '{papel}'. Use: admin, inspetor ou visitante.")
+        print(f"ERR: Papel inválido: '{papel}'. Use: admin, inspetor ou visitante.")
         sys.exit(1)
 
     h    = bcrypt.hashpw(senha.encode(), bcrypt.gensalt()).decode()
@@ -41,13 +41,13 @@ def criar_ou_atualizar(usuario: str, nome: str, senha: str, papel: str = "inspet
             "UPDATE usuarios SET hash_senha=?, nome=?, papel=?, ativo=1 WHERE usuario=?",
             (h, nome, papel, usuario)
         )
-        print(f"✅ Usuário '{usuario}' atualizado (papel={papel}).")
+        print(f"OK: Usuário '{usuario}' atualizado (papel={papel}).")
     else:
         conn.execute(
             "INSERT INTO usuarios (usuario, nome, hash_senha, papel) VALUES (?,?,?,?)",
             (usuario, nome, h, papel)
         )
-        print(f"✅ Usuário '{usuario}' criado com sucesso (papel={papel}).")
+        print(f"OK: Usuário '{usuario}' criado com sucesso (papel={papel}).")
 
     conn.commit()
     conn.close()

@@ -7,7 +7,7 @@
 ![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?style=flat&logo=pwa&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat)
 
-### 🌐 [Acessar Demo ao Vivo](https://sistema-qualidade-production.up.railway.app)
+###  [Acessar Demo ao Vivo](https://sistema-qualidade-production.up.railway.app)
 
 ---
 

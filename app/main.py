@@ -49,7 +49,7 @@ import os
 async def csp_report(request: Request):
     # Recebe os relatórios de violação de política de segurança do navegador
     report = await request.json()
-    print(f"ALERTA SEGURANÇA: CSP Violation - {report}")
+    print(f"ALERTA SEGURANCA: CSP Violation - {report}")
     return {"status": "ok"}
 
 
