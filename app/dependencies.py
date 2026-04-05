@@ -1,14 +1,26 @@
 # app/dependencies.py
 import os
+import json
+import hashlib
+import base64
 from datetime import datetime
 from fastapi import Request, HTTPException, Depends
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+from cryptography.fernet import Fernet
 
 from app.database import SessionLocal
 from app.models import Auditoria
 
-SECRET_KEY = os.getenv("SECRET_KEY", "troque-em-producao-use-valor-longo-aleatorio")
+_raw_secret = os.getenv("SECRET_KEY", "troque-em-producao-use-valor-longo-aleatorio")
+if _raw_secret == "troque-em-producao-use-valor-longo-aleatorio":
+    print("AVISO: Usando SECRET_KEY padrão! Altere isso em produção para segurança real.")
+
+SECRET_KEY = _raw_secret
+# Derivamos uma chave Fernet a partir da SECRET_KEY para criptografar os dados da sessão
+_fernet_key = base64.urlsafe_b64encode(hashlib.sha256(SECRET_KEY.encode()).digest())
+_fernet = Fernet(_fernet_key)
+
 TIMEOUT_MIN = int(os.getenv("SESSION_TIMEOUT_MINUTES", 60))
 serializer = URLSafeTimedSerializer(SECRET_KEY)
 
@@ -16,15 +28,19 @@ serializer = URLSafeTimedSerializer(SECRET_KEY)
 templates = Jinja2Templates(directory="/app/templates")
 
 def criar_sessao(nome: str, usuario: str, papel: str, demo: bool = False) -> str:
-    return serializer.dumps({
+    payload = json.dumps({
         "nome": nome, "usuario": usuario, "papel": papel, 
         "demo": demo, "ts": datetime.now().isoformat()
     })
+    cifrado = _fernet.encrypt(payload.encode()).decode()
+    return serializer.dumps(cifrado)
 
 def ler_sessao(token: str):
     try:
-        return serializer.loads(token, max_age=TIMEOUT_MIN * 60)
-    except (BadSignature, SignatureExpired):
+        cifrado = serializer.loads(token, max_age=TIMEOUT_MIN * 60)
+        decifrado = _fernet.decrypt(cifrado.encode()).decode()
+        return json.loads(decifrado)
+    except Exception:
         return None
 
 def get_sessao(request: Request):

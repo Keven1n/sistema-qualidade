@@ -23,8 +23,10 @@ def criar_usuario(request: Request, sessao: dict = Depends(require_admin),
                   novo_usuario: str = Form(...), novo_nome: str = Form(...),
                   nova_senha: str = Form(...), novo_papel: str = Form(default="inspetor"),
                   db: Session = Depends(get_db_session)):
-    if len(nova_senha) < 6:
-        raise HTTPException(400, "Senha muito curta.")
+    if len(nova_senha) < 6 or len(nova_senha) > 100:
+        raise HTTPException(400, "A senha deve ter entre 6 e 100 caracteres.")
+    if len(novo_usuario.strip()) > 50 or len(novo_nome.strip()) > 100:
+        raise HTTPException(400, "Usuário ou nome excedeu o limite máximo de caracteres.")
     if novo_papel not in PAPEIS_VALIDOS:
         raise HTTPException(400, "Papel inválido.")
     

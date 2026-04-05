@@ -38,10 +38,14 @@ def get_image_type(data: bytes):
 async def salvar_imagens(files: list[UploadFile]) -> str:
     caminhos = []
     for arq in files:
+        if not arq.filename: continue
         conteudo = await arq.read()
-        if not conteudo or len(conteudo) > MAX_SIZE_MB * 1024 * 1024: continue
+        if not conteudo: continue
+        if len(conteudo) > MAX_SIZE_MB * 1024 * 1024:
+            raise HTTPException(400, f"Arquivo {arq.filename} excede {MAX_SIZE_MB}MB.")
         tipo = get_image_type(conteudo)
-        if not tipo: continue
+        if not tipo:
+            raise HTTPException(400, f"Arquivo {arq.filename} possui um formato não permitido. Apenas imagens JPEG e PNG são aceitas.")
         nome = f"{uuid.uuid4()}.{tipo}"
         with open(os.path.join(IMG_DIR, nome), "wb") as f:
             f.write(conteudo)
@@ -74,7 +78,7 @@ def dashboard(request: Request, sessao: dict = Depends(get_sessao), data_ini: st
     })
 
 @router.get("/nova", response_class=HTMLResponse)
-def nova_page(request: Request, sessao: dict = Depends(get_sessao), reinspeção_de: Optional[int] = None, db: Session = Depends(get_db_session)):
+def nova_page(request: Request, sessao: dict = Depends(require_inspetor_ou_admin), reinspeção_de: Optional[int] = None, db: Session = Depends(get_db_session)):
     if not sessao: return RedirectResponse("/login", status_code=303)
     
     cat_rows = db.query(Catalogo).filter(Catalogo.ativo == True).order_by(Catalogo.linha, Catalogo.modelo).all()
@@ -97,15 +101,28 @@ async def nova_post(
     obs: str = Form(default=""), fotos: list[UploadFile] = File(default=[]), assinatura_b64: str = Form(default=""), reinspeção_de: Optional[int] = Form(default=None),
     db: Session = Depends(get_db_session)
 ):
+    os_num = os_num.strip()
+    if not os_num.isdigit() or len(os_num) > 20:
+        raise HTTPException(400, "O.S. inválida. Deve conter apenas até 20 números.")
+    if len(obs) > 2500:
+        raise HTTPException(400, "Observação excede 2500 caracteres.")
+    if any(len(x) > 100 for x in [modelo, soldador, processo, status_ins, data_inspecao]):
+        raise HTTPException(400, "Um dos campos excedeu o limite de 100 caracteres.")
+
     if not reinspeção_de:
-        duplicada = db.query(Inspecao).filter(Inspecao.os == os_num.strip(), Inspecao.reinspeção_de == None).first()
+        duplicada = db.query(Inspecao).filter(Inspecao.os == os_num, Inspecao.reinspeção_de == None).first()
         if duplicada:
-            return RedirectResponse(f"/nova?erro=O.S. {os_num.strip()} já está registrada.", status_code=303)
+            return RedirectResponse(f"/nova?erro=O.S. {os_num} já está registrada.", status_code=303)
 
     caminhos = await salvar_imagens(fotos)
     
     assinatura_path = None
-    if assinatura_b64 and assinatura_b64.startswith("data:image/png;base64,"):
+    if assinatura_b64:
+        if not assinatura_b64.startswith("data:image/png;base64,"):
+            raise HTTPException(400, "Assinatura possui formato inválido.")
+        if len(assinatura_b64) > 1_000_000:
+            raise HTTPException(400, "Assinatura muito grande.")
+            
         import base64
         b64_data = assinatura_b64.split(",")[1]
         nome_ass = f"ass_{uuid.uuid4()}.png"
@@ -241,11 +258,20 @@ def editar_page(id_reg: int, request: Request, sessao: dict = Depends(require_ad
 @router.post("/editar/{id_reg}")
 def editar_post(id_reg: int, request: Request, sessao: dict = Depends(require_admin), os_num: str = Form(...), soldador: str = Form(...), 
                 processo: str = Form(...), status_ins: str = Form(...), defeitos: str = Form(default=""), obs: str = Form(default=""), db: Session = Depends(get_db_session)):
+    
+    os_num = os_num.strip()
+    if not os_num.isdigit() or len(os_num) > 20:
+        raise HTTPException(400, "O.S. inválida. Deve conter apenas até 20 números.")
+    if len(obs) > 2500:
+        raise HTTPException(400, "Observação excede 2500 caracteres.")
+    if any(len(x) > 100 for x in [soldador, processo, status_ins]) or len(defeitos.strip()) > 300:
+        raise HTTPException(400, "Um dos campos de texto excedeu o limite máximo.")
+
     row = db.query(Inspecao).filter(Inspecao.id == id_reg).first()
     if not row: raise HTTPException(404, "Registro não encontrado.")
     
     antes = f"os={row.os} soldador={row.soldador} status={row.status}"
-    row.os, row.soldador, row.processo, row.status, row.defeitos, row.obs = os_num.strip(), soldador.strip(), processo, status_ins, defeitos.strip(), obs
+    row.os, row.soldador, row.processo, row.status, row.defeitos, row.obs = os_num, soldador.strip(), processo, status_ins, defeitos.strip(), obs
     db.commit()
     registrar_auditoria(sessao.get("usuario", "?"), "inspecao_editada", alvo=f"inspecao#{id_reg}", detalhe=f"antes: {antes}")
     return RedirectResponse("/historico", status_code=303)

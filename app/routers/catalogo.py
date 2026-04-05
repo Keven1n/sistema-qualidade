@@ -16,6 +16,9 @@ def catalogo_page(request: Request, sessao: dict = Depends(require_admin), db: S
 @router.post("/criar")
 def criar_catalogo(request: Request, sessao: dict = Depends(require_admin),
                    linha: str = Form(...), modelo: str = Form(...), db: Session = Depends(get_db_session)):
+    if len(linha.strip()) > 100 or len(modelo.strip()) > 100:
+        raise HTTPException(400, "Linha ou modelo excedem o limite de 100 caracteres.")
+
     existente = db.query(Catalogo).filter(Catalogo.linha == linha.strip(), Catalogo.modelo == modelo.strip()).first()
     if existente:
         raise HTTPException(400, "Modelo já existe nesta linha.")

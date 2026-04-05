@@ -22,6 +22,9 @@ def soldadores_page(request: Request, sessao: dict = Depends(require_admin), db:
 def criar_soldador(request: Request, sessao: dict = Depends(require_admin), 
                    nome: str = Form(...), db: Session = Depends(get_db_session)):
     
+    if len(nome.strip()) > 100:
+        raise HTTPException(400, "O nome excede o limite máximo de 100 caracteres.")
+
     # Verifica se já existe um soldador com esse nome
     existente = db.query(Soldador).filter(Soldador.nome == nome.strip()).first()
     if existente:
