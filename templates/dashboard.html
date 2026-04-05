@@ -180,6 +180,7 @@ function exportarDossie() {
     form.target = '_blank';
 
     const periodFields = [
+      { n: 'csrf_token', v: '{{ csrf_token(sessao) }}' },
       { n: 'data_ini', v: document.querySelector('input[name="data_ini"]').value },
       { n: 'data_fim', v: document.querySelector('input[name="data_fim"]').value },
       { n: 'c_status', v: b1 },

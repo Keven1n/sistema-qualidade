@@ -16,7 +16,7 @@ from cryptography.fernet import Fernet
 
 from app.database import get_db_session
 from app.models import Inspecao, Catalogo, Soldador
-from app.dependencies import templates, get_sessao, require_auth, require_admin, require_inspetor_ou_admin, registrar_auditoria
+from app.dependencies import templates, get_sessao, require_auth, require_admin, require_inspetor_ou_admin, registrar_auditoria, verificar_csrf
 
 router = APIRouter(tags=["Inspeções"])
 
@@ -96,6 +96,7 @@ def nova_page(request: Request, sessao: dict = Depends(require_inspetor_ou_admin
 @router.post("/nova")
 async def nova_post(
     request: Request, sessao: dict = Depends(require_inspetor_ou_admin),
+    _csrf: None = Depends(verificar_csrf),
     os_num: str = Form(...), data_inspecao: str = Form(...), modelo: str = Form(...), soldador: str = Form(...),
     processo: str = Form(...), status_ins: str = Form(...), defeitos: list[str] = Form(default=[]),
     obs: str = Form(default=""), fotos: list[UploadFile] = File(default=[]), assinatura_b64: str = Form(default=""), reinspeção_de: Optional[int] = Form(default=None),
@@ -197,6 +198,7 @@ def exportar_pdf(id_reg: int, request: Request, sessao: dict = Depends(get_sessa
 def exportar_dashboard_dossie(
     request: Request,
     sessao: dict = Depends(get_sessao),
+    _csrf: None = Depends(verificar_csrf),
     db: Session = Depends(get_db_session),
     data_ini: str = Form(""),
     data_fim: str = Form(""),
@@ -256,7 +258,8 @@ def editar_page(id_reg: int, request: Request, sessao: dict = Depends(require_ad
     return templates.TemplateResponse("editar.html", {"request": request, "sessao": sessao, "row": row, "soldadores": soldadores, "processos": PROCESSOS})
 
 @router.post("/editar/{id_reg}")
-def editar_post(id_reg: int, request: Request, sessao: dict = Depends(require_admin), os_num: str = Form(...), soldador: str = Form(...), 
+def editar_post(id_reg: int, request: Request, sessao: dict = Depends(require_admin), _csrf: None = Depends(verificar_csrf),
+                os_num: str = Form(...), soldador: str = Form(...),
                 processo: str = Form(...), status_ins: str = Form(...), defeitos: str = Form(default=""), obs: str = Form(default=""), db: Session = Depends(get_db_session)):
     
     os_num = os_num.strip()
@@ -277,7 +280,7 @@ def editar_post(id_reg: int, request: Request, sessao: dict = Depends(require_ad
     return RedirectResponse("/historico", status_code=303)
 
 @router.post("/excluir/{id_reg}")
-def excluir(id_reg: int, request: Request, sessao: dict = Depends(require_admin), db: Session = Depends(get_db_session)):
+def excluir(id_reg: int, request: Request, sessao: dict = Depends(require_admin), _csrf: None = Depends(verificar_csrf), db: Session = Depends(get_db_session)):
     row = db.query(Inspecao).filter(Inspecao.id == id_reg).first()
     if not row: raise HTTPException(404, "Registro não encontrado.")
     db.delete(row)

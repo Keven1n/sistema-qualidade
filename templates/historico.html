@@ -99,6 +99,7 @@
      <a href="/editar/{{ r.id }}" class="btn-sm btn-edit">Editar</a>
      <form method="post" action="/excluir/{{ r.id }}" style="display:inline"
            onsubmit="return confirm('Excluir registro #{{ r.id }}?')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token(sessao) }}"/>
       <button type="submit" class="btn-sm btn-delete">Excluir</button>
      </form>
      {% endif %}

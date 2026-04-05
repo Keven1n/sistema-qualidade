@@ -9,6 +9,7 @@
 </div>
 
 <form method="post" action="/editar/{{ row.id }}" class="form-card">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token(sessao) }}"/>
 
  <div class="form-row">
   <div class="form-group">

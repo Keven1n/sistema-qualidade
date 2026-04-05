@@ -54,7 +54,7 @@ def login_post(request: Request, usuario: str = Form(...), senha: str = Form(...
         registrar_auditoria(usuario, "login_ok", detalhe=f"papel={papel}")
         token = criar_sessao(nome, usuario.strip().lower(), papel)
         resp = RedirectResponse("/", status_code=303)
-        resp.set_cookie("sessao", token, httponly=True, samesite="lax", max_age=TIMEOUT_MIN * 60)
+        resp.set_cookie("sessao", token, httponly=True, secure=True, samesite="lax", max_age=TIMEOUT_MIN * 60)
         return resp
     
     registrar_auditoria(usuario.strip().lower(), "login_falhou")

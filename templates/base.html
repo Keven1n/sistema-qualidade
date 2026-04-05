@@ -9,10 +9,8 @@
  <meta name="theme-color" content="#06b6d4" />
  <link rel="apple-touch-icon" href="/static/img/logo.png">
  <script>
-   // Inicialização rápida via localstorage para prevenção de FOUC
-   if (localStorage.getItem('theme') === 'dark') {
-     document.documentElement.classList.add('dark-mode');
-   }
+   // Anti-FOUC: aplica dark mode antes de renderizar
+   try { if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark-mode'); } catch(e){}
  </script>
  {% block head %}{% endblock %}
 </head>
@@ -103,39 +101,6 @@
 
  {% block scripts %}{% endblock %}
  
- <script>
-   if ('serviceWorker' in navigator) {
-     window.addEventListener('load', () => {
-       navigator.serviceWorker.register('/static/sw.js').catch(err => console.log('SW falhou: ', err));
-     });
-   }
-
-   // Controle do Dark Mode Premium
-   const themeToggles = document.querySelectorAll('.theme-toggle');
-   
-   function setIconsAndMode(isDark) {
-     document.documentElement.classList.toggle('dark-mode', isDark);
-     document.querySelectorAll('.sun-icon').forEach(s => s.style.display = isDark ? 'block' : 'none');
-     document.querySelectorAll('.moon-icon').forEach(m => m.style.display = isDark ? 'none' : 'block');
-   }
-
-   setIconsAndMode(document.documentElement.classList.contains('dark-mode'));
-
-   themeToggles.forEach(btn => {
-     btn.addEventListener('click', () => {
-       const isDark = document.documentElement.classList.toggle('dark-mode');
-       localStorage.setItem('theme', isDark ? 'dark' : 'light');
-       setIconsAndMode(isDark);
-     });
-   });
-
-   const btn = document.querySelector('.menu-toggle');
-   const nav = document.querySelector('.topbar-nav');
-   if(btn && nav) {
-     btn.addEventListener('click', () => {
-       nav.classList.toggle('active');
-     });
-   }
- </script>
+ <script src="/static/js/app.js"></script>
 </body>
 </html>

@@ -24,6 +24,7 @@
   <td data-label="Nome">{{ u.nome }}</td>
   <td data-label="Papel">
    <form method="post" action="/usuarios/{{ u.id }}/papel" style="display:inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(sessao) }}"/>
     <select name="novo_papel" onchange="this.form.submit()" style="font-size:0.85rem;padding:2px 4px">
      {% for p in papeis %}
      <option value="{{ p }}" {% if u.papel == p %}selected{% endif %}>{{ p }}</option>
@@ -38,6 +39,7 @@
   </td>
   <td data-label="Ações">
    <form method="post" action="/usuarios/{{ u.id }}/toggle" style="display:inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token(sessao) }}"/>
     {% if u.ativo %}
     <input type="hidden" name="ativo" value="0"/>
     <button type="submit" class="btn-sm btn-delete">Desativar</button>
@@ -64,6 +66,7 @@
  <div class="form-card">
  <h3>Novo Usuário</h3>
  <form method="post" action="/usuarios/criar">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token(sessao) }}"/>
   <div class="form-group">
    <label>Login (minúsculas, sem espaços)</label>
    <input type="text" name="novo_usuario" required pattern="[a-z0-9_]+"

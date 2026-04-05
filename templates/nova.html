@@ -19,6 +19,7 @@
 {% endif %}
 
 <form method="post" action="/nova" enctype="multipart/form-data" class="form-card">
+ <input type="hidden" name="csrf_token" value="{{ csrf_token(sessao) }}"/>
 
  {% if reinspeção_de %}
  <input type="hidden" name="reinspeção_de" value="{{ reinspeção_de }}"/>

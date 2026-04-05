@@ -26,6 +26,7 @@
      </td>
      <td data-label="Ação">
       <form method="post" action="/soldadores/{{ s.id }}/toggle" style="display:inline">
+       <input type="hidden" name="csrf_token" value="{{ csrf_token(sessao) }}"/>
        {% if s.ativo %}
        <input type="hidden" name="ativo" value="0"/>
        <button type="submit" class="btn-sm btn-delete">Desativar</button>
@@ -45,6 +46,7 @@
  <div class="form-card">
   <h3>Novo Soldador</h3>
   <form method="post" action="/soldadores/criar">
+   <input type="hidden" name="csrf_token" value="{{ csrf_token(sessao) }}"/>
    <div class="form-group">
     <label>Nome completo</label>
     <input type="text" name="nome" required placeholder="Ex: Pedro Alves"/>

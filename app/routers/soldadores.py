@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db_session
 from app.models import Soldador
-from app.dependencies import templates, require_admin, registrar_auditoria
+from app.dependencies import templates, require_admin, registrar_auditoria, verificar_csrf
 
 # O prefixo indica que todas as rotas aqui começam por /soldadores
 router = APIRouter(prefix="/soldadores", tags=["Soldadores"])
@@ -19,7 +19,8 @@ def soldadores_page(request: Request, sessao: dict = Depends(require_admin), db:
     })
 
 @router.post("/criar")
-def criar_soldador(request: Request, sessao: dict = Depends(require_admin), 
+def criar_soldador(request: Request, sessao: dict = Depends(require_admin),
+                   _csrf: None = Depends(verificar_csrf),
                    nome: str = Form(...), db: Session = Depends(get_db_session)):
     
     if len(nome.strip()) > 100:
@@ -39,6 +40,7 @@ def criar_soldador(request: Request, sessao: dict = Depends(require_admin),
 
 @router.post("/{id_s}/toggle")
 def toggle_soldador(id_s: int, request: Request, sessao: dict = Depends(require_admin),
+                    _csrf: None = Depends(verificar_csrf),
                     ativo: int = Form(...), db: Session = Depends(get_db_session)):
     
     soldador = db.query(Soldador).filter(Soldador.id == id_s).first()

@@ -27,6 +27,7 @@
      </td>
      <td data-label="Ação">
       <form method="post" action="/catalogo-admin/{{ item.id }}/toggle" style="display:inline">
+       <input type="hidden" name="csrf_token" value="{{ csrf_token(sessao) }}"/>
        {% if item.ativo %}
        <input type="hidden" name="ativo" value="0"/>
        <button type="submit" class="btn-sm btn-delete">Desativar</button>
@@ -46,6 +47,7 @@
  <div class="form-card">
   <h3>Novo Modelo</h3>
   <form method="post" action="/catalogo-admin/criar">
+   <input type="hidden" name="csrf_token" value="{{ csrf_token(sessao) }}"/>
    <div class="form-group">
     <label>Linha de Produção</label>
     <input type="text" name="linha" required placeholder="Ex: Linha Leite"/>

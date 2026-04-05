@@ -2,9 +2,10 @@
 import os
 import json
 import hashlib
+import hmac
 import base64
 from datetime import datetime
-from fastapi import Request, HTTPException, Depends
+from fastapi import Request, HTTPException, Depends, Form
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from cryptography.fernet import Fernet
@@ -26,6 +27,24 @@ serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 # Centralizamos os templates aqui para serem usados em qualquer router
 templates = Jinja2Templates(directory="/app/templates")
+
+# ── CSRF ────────────────────────────────────────────────────────────────────
+def gerar_csrf_token(sessao: dict) -> str:
+    """Gera um token CSRF vinculado à sessão do usuário via HMAC-SHA256."""
+    msg = f"{sessao.get('usuario','')}:{sessao.get('ts','')}".encode()
+    return hmac.new(SECRET_KEY.encode(), msg, hashlib.sha256).hexdigest()
+
+def verificar_csrf(request: Request, csrf_token: str = Form(default="")):
+    """Dependency: valida o CSRF token enviado no form contra o da sessão."""
+    sessao = get_sessao(request)
+    if not sessao:
+        raise HTTPException(status_code=403, detail="Sessão inválida.")
+    esperado = gerar_csrf_token(sessao)
+    if not hmac.compare_digest(csrf_token, esperado):
+        raise HTTPException(status_code=403, detail="Token CSRF inválido. Recarregue a página e tente novamente.")
+
+# Registra o helper de CSRF como global Jinja2 (disponível em todos os templates)
+templates.env.globals["csrf_token"] = gerar_csrf_token
 
 def criar_sessao(nome: str, usuario: str, papel: str) -> str:
     payload = json.dumps({

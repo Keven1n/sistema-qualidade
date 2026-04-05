@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db_session
 from app.models import Catalogo
-from app.dependencies import templates, require_admin, registrar_auditoria
+from app.dependencies import templates, require_admin, registrar_auditoria, verificar_csrf
 
 router = APIRouter(prefix="/catalogo-admin", tags=["Catálogo"])
 
@@ -15,6 +15,7 @@ def catalogo_page(request: Request, sessao: dict = Depends(require_admin), db: S
 
 @router.post("/criar")
 def criar_catalogo(request: Request, sessao: dict = Depends(require_admin),
+                   _csrf: None = Depends(verificar_csrf),
                    linha: str = Form(...), modelo: str = Form(...), db: Session = Depends(get_db_session)):
     if len(linha.strip()) > 100 or len(modelo.strip()) > 100:
         raise HTTPException(400, "Linha ou modelo excedem o limite de 100 caracteres.")
@@ -31,6 +32,7 @@ def criar_catalogo(request: Request, sessao: dict = Depends(require_admin),
 
 @router.post("/{id_c}/toggle")
 def toggle_catalogo(id_c: int, request: Request, sessao: dict = Depends(require_admin),
+                    _csrf: None = Depends(verificar_csrf),
                     ativo: int = Form(...), db: Session = Depends(get_db_session)):
     item = db.query(Catalogo).filter(Catalogo.id == id_c).first()
     if not item:
