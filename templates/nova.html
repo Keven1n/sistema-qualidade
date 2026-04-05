@@ -126,9 +126,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" 
-        integrity="sha384-2QmiRCVNkt8O3PJkVvtGdW29/3RlMoga2KA6dfCYO16iU7Yf3XeWfp4/gnH4gF9M" 
-        crossorigin="anonymous"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script id="catalogo-data" type="application/json">
 {{ catalogo|tojson|safe }}
 </script>
@@ -160,53 +158,48 @@ document.addEventListener("DOMContentLoaded", () => {
  let html5QrCode = null;
 
  if (btnScan) {
-  html5QrCode = new Html5Qrcode("qr-reader");
-  
   btnScan.addEventListener('click', async () => {
+   console.log("QR Click: isScanning=", isScanning);
    if (btnScan.disabled) return;
    
-   if (!isScanning) {
-    btnScan.disabled = true;
-    qrReader.style.display = 'block';
-    btnScan.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Fechar';
-    
-    try {
-      await html5QrCode.start(
-        { facingMode: "environment" }, 
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
-          osInput.value = decodedText;
-          btnScan.click(); // Automaticamente para o scan ao ler com sucesso
-        },
-        () => {}
-      );
-      isScanning = true;
-    } catch (err) {
-      console.error("Erro ao iniciar a câmera", err);
-      alert("Nao foi possivel acessar a camera do dispositivo.");
-      qrReader.style.display = 'none';
-      btnScan.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 7V4h3"></path><path d="M20 7V4h-3"></path><path d="M4 17v3h3"></path><path d="M20 17v3h-3"></path><circle cx="12" cy="12" r="3"></circle></svg> Ler QR';
-      isScanning = false;
-    } finally {
-      btnScan.disabled = false;
+   try {
+    if (!isScanning) {
+     btnScan.disabled = true;
+     qrReader.style.display = 'block';
+     btnScan.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Fechar';
+     
+     if (!html5QrCode) {
+       html5QrCode = new Html5Qrcode("qr-reader");
+     }
+     
+     await html5QrCode.start(
+       { facingMode: "environment" }, 
+       { fps: 10, qrbox: { width: 250, height: 250 } },
+       (decodedText) => {
+         osInput.value = decodedText;
+         btnScan.click(); 
+       },
+       () => {}
+     );
+     isScanning = true;
+     btnScan.disabled = false;
+    } else {
+     btnScan.disabled = true;
+     if (html5QrCode) {
+       await html5QrCode.stop();
+     }
+     qrReader.style.display = 'none';
+     btnScan.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 7V4h3"></path><path d="M20 7V4h-3"></path><path d="M4 17v3h3"></path><path d="M20 17v3h-3"></path><circle cx="12" cy="12" r="3"></circle></svg> Ler QR';
+     isScanning = false;
+     btnScan.disabled = false;
     }
-   } else {
-    btnScan.disabled = true;
-    try {
-      if (html5QrCode.getState() > 1) { // Verifica se esta sendo usado
-         await html5QrCode.stop();
-      }
-      qrReader.style.display = 'none';
-      btnScan.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 7V4h3"></path><path d="M20 7V4h-3"></path><path d="M4 17v3h3"></path><path d="M20 17v3h-3"></path><circle cx="12" cy="12" r="3"></circle></svg> Ler QR';
-      isScanning = false;
-    } catch (err) {
-      console.error("Erro ao parar a câmera", err);
-      qrReader.style.display = 'none';
-      btnScan.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 7V4h3"></path><path d="M20 7V4h-3"></path><path d="M4 17v3h3"></path><path d="M20 17v3h-3"></path><circle cx="12" cy="12" r="3"></circle></svg> Ler QR';
-      isScanning = false;
-    } finally {
-      btnScan.disabled = false;
-    }
+   } catch (err) {
+     console.error("QR Error:", err);
+     alert("Erro ao acessar camera. Verifique permissoes.");
+     qrReader.style.display = 'none';
+     btnScan.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 7V4h3"></path><path d="M20 7V4h-3"></path><path d="M4 17v3h3"></path><path d="M20 17v3h-3"></path><circle cx="12" cy="12" r="3"></circle></svg> Ler QR';
+     isScanning = false;
+     btnScan.disabled = false;
    }
   });
  }
@@ -227,7 +220,6 @@ document.addEventListener("DOMContentLoaded", () => {
    ctx.lineJoin = 'round';
    ctx.strokeStyle = '#0f172a';
  }
- // Precisa de um pequeno delay para garantir que o layout renderizou
  setTimeout(initCanvas, 100);
 
  function getPos(e) {
@@ -253,7 +245,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
  function draw(e) {
   if (!isDrawing) return;
-  e.preventDefault(); // Impede rolagem da página no touch
+  e.preventDefault();
   const pos = getPos(e);
   ctx.lineTo(pos.x, pos.y);
   ctx.stroke();
@@ -283,7 +275,6 @@ document.addEventListener("DOMContentLoaded", () => {
     alert("Por favor, colete a assinatura antes de salvar.");
     return;
   }
-  // Proteção contra clique duplo
   const btnSubmit = form.querySelector('button[type="submit"]');
   if (btnSubmit) {
     btnSubmit.disabled = true;
