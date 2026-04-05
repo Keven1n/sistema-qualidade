@@ -52,7 +52,7 @@ def login_post(request: Request, usuario: str = Form(...), senha: str = Form(...
         return templates.TemplateResponse("login.html", {"request": request, "erro": "Conta bloqueada. Tente novamente em 15 minutos."})
     elif nome and papel:
         registrar_auditoria(usuario, "login_ok", detalhe=f"papel={papel}")
-        token = criar_sessao(nome, usuario.strip().lower(), papel, demo=False)
+        token = criar_sessao(nome, usuario.strip().lower(), papel)
         resp = RedirectResponse("/", status_code=303)
         resp.set_cookie("sessao", token, httponly=True, samesite="lax", max_age=TIMEOUT_MIN * 60)
         return resp
@@ -60,12 +60,7 @@ def login_post(request: Request, usuario: str = Form(...), senha: str = Form(...
     registrar_auditoria(usuario.strip().lower(), "login_falhou")
     return templates.TemplateResponse("login.html", {"request": request, "erro": "Usuário ou senha incorretos."})
 
-@router.post("/login-demo")
-def login_demo():
-    token = criar_sessao("Visitante", "demo", "visitante", demo=True)
-    resp = RedirectResponse("/", status_code=303)
-    resp.set_cookie("sessao", token, httponly=True, samesite="lax", max_age=TIMEOUT_MIN * 60)
-    return resp
+
 
 @router.get("/logout")
 def logout(request: Request):

@@ -7,9 +7,6 @@
  <h2>Registrar Nova Inspeção</h2>
 </div>
 
-{% if sessao.demo %}
-<div class="alert alert-warning">Modo demonstração — salvamento desativado.</div>
-{% endif %}
 
 {% if erro %}
 <div class="alert alert-error">{{ erro }}</div>
@@ -118,7 +115,7 @@
  </div>
 
  <div class="form-actions">
-  <button type="submit" class="btn btn-primary" {% if sessao.demo %}disabled{% endif %}>
+  <button type="submit" class="btn btn-primary">
    Salvar Registro
   </button>
   <a href="/" class="btn btn-secondary">Cancelar</a>

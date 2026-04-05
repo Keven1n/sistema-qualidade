@@ -27,10 +27,10 @@ serializer = URLSafeTimedSerializer(SECRET_KEY)
 # Centralizamos os templates aqui para serem usados em qualquer router
 templates = Jinja2Templates(directory="/app/templates")
 
-def criar_sessao(nome: str, usuario: str, papel: str, demo: bool = False) -> str:
+def criar_sessao(nome: str, usuario: str, papel: str) -> str:
     payload = json.dumps({
-        "nome": nome, "usuario": usuario, "papel": papel, 
-        "demo": demo, "ts": datetime.now().isoformat()
+        "nome": nome, "usuario": usuario, "papel": papel,
+        "ts": datetime.now().isoformat()
     })
     cifrado = _fernet.encrypt(payload.encode()).decode()
     return serializer.dumps(cifrado)

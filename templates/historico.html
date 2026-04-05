@@ -56,7 +56,6 @@
     {{ r.os }}
     {% if r['reinspeção_de'] %}
     <span style="font-size:0.75rem;color:var(--color-text-secondary)"> (reinsp. #{{ r['reinspeção_de'] }})</span>
-    {% endif %}
    </td>
    <td data-label="Modelo">{{ r.modelo }}</td>
    <td data-label="Soldador">{{ r.soldador }}</td>
@@ -74,11 +73,9 @@
       <a href="/fotos/{{ foto }}" target="_blank">
        <img src="/fotos/{{ foto }}" style="height:40px;width:40px;object-fit:cover;border-radius:4px;margin-right:2px;cursor:pointer"/>
       </a>
-      {% endif %}
      {% endfor %}
     {% else %}
      <span style="color:var(--color-text-secondary);font-size:0.8rem">—</span>
-    {% endif %}
    </td>
    <td data-label="Assinatura" style="text-align:center;">
     {% if r.assinatura %}
@@ -87,23 +84,18 @@
      </a>
     {% else %}
      <span style="color:var(--color-text-secondary);font-size:0.8rem">—</span>
-    {% endif %}
    </td>
    <td data-label="Ações" style="white-space: nowrap; vertical-align: middle;">
     <div class="actions">
-    {% if not sessao.demo %}
      <a href="/historico/{{ r.id }}/pdf" target="_blank" class="btn-sm" style="background:var(--brand-deep); color:#fff; padding:4px 8px; font-weight:bold" title="Gerar Laudo PDF">📋 PDF</a>
      {% if r.status == 'Reprovado / Retrabalho' %}
      <a href="/nova?reinspeção_de={{ r.id }}" class="btn-sm btn-edit" title="Registrar reinspeção">Reinsp.</a>
-     {% endif %}
      {% if sessao.papel == 'admin' %}
      <a href="/editar/{{ r.id }}" class="btn-sm btn-edit">Editar</a>
      <form method="post" action="/excluir/{{ r.id }}" style="display:inline"
            onsubmit="return confirm('Excluir registro #{{ r.id }}?')">
       <button type="submit" class="btn-sm btn-delete">Excluir</button>
      </form>
-     {% endif %}
-    {% endif %}
     </div>
    </td>
   </tr>
