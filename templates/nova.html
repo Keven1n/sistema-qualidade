@@ -160,45 +160,53 @@ document.addEventListener("DOMContentLoaded", () => {
  let html5QrCode = null;
 
  if (btnScan) {
-  btnScan.addEventListener('click', () => {
+  html5QrCode = new Html5Qrcode("qr-reader");
+  
+  btnScan.addEventListener('click', async () => {
+   if (btnScan.disabled) return;
+   
    if (!isScanning) {
+    btnScan.disabled = true;
     qrReader.style.display = 'block';
     btnScan.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg> Fechar';
-    isScanning = true;
     
-    setTimeout(() => {
-      if (!html5QrCode) {
-        html5QrCode = new Html5Qrcode("qr-reader");
-      }
-      
-      html5QrCode.start(
+    try {
+      await html5QrCode.start(
         { facingMode: "environment" }, 
         { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText, decodedResult) => {
+        (decodedText) => {
           osInput.value = decodedText;
-          html5QrCode.stop().then(() => {
-            qrReader.style.display = 'none';
-            btnScan.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 7V4h3"></path><path d="M20 7V4h-3"></path><path d="M4 17v3h3"></path><path d="M20 17v3h-3"></path><circle cx="12" cy="12" r="3"></circle></svg> Ler QR';
-            isScanning = false;
-            osInput.style.backgroundColor = '#e8f5e9';
-            setTimeout(() => osInput.style.backgroundColor = '', 1000);
-          });
+          btnScan.click(); // Automaticamente para o scan ao ler com sucesso
         },
-        (errorMessage) => {}
-      ).catch(err => {
-        console.error("Erro ao iniciar a câmera", err);
-        alert("Não foi possível acessar a câmera do dispositivo.");
-        qrReader.style.display = 'none';
-        btnScan.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 7V4h3"></path><path d="M20 7V4h-3"></path><path d="M4 17v3h3"></path><path d="M20 17v3h-3"></path><circle cx="12" cy="12" r="3"></circle></svg> Ler QR';
-        isScanning = false;
-      });
-    }, 150); // Delay para garantir que o contêiner esteja visível e estável
+        () => {}
+      );
+      isScanning = true;
+    } catch (err) {
+      console.error("Erro ao iniciar a câmera", err);
+      alert("Nao foi possivel acessar a camera do dispositivo.");
+      qrReader.style.display = 'none';
+      btnScan.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 7V4h3"></path><path d="M20 7V4h-3"></path><path d="M4 17v3h3"></path><path d="M20 17v3h-3"></path><circle cx="12" cy="12" r="3"></circle></svg> Ler QR';
+      isScanning = false;
+    } finally {
+      btnScan.disabled = false;
+    }
    } else {
-    html5QrCode.stop().then(() => {
-     qrReader.style.display = 'none';
-     btnScan.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 7V4h3"></path><path d="M20 7V4h-3"></path><path d="M4 17v3h3"></path><path d="M20 17v3h-3"></path><circle cx="12" cy="12" r="3"></circle></svg> Ler QR';
-     isScanning = false;
-    }).catch(err => console.error("Erro ao parar a câmera", err));
+    btnScan.disabled = true;
+    try {
+      if (html5QrCode.getState() > 1) { // Verifica se esta sendo usado
+         await html5QrCode.stop();
+      }
+      qrReader.style.display = 'none';
+      btnScan.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 7V4h3"></path><path d="M20 7V4h-3"></path><path d="M4 17v3h3"></path><path d="M20 17v3h-3"></path><circle cx="12" cy="12" r="3"></circle></svg> Ler QR';
+      isScanning = false;
+    } catch (err) {
+      console.error("Erro ao parar a câmera", err);
+      qrReader.style.display = 'none';
+      btnScan.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 7V4h3"></path><path d="M20 7V4h-3"></path><path d="M4 17v3h3"></path><path d="M20 17v3h-3"></path><circle cx="12" cy="12" r="3"></circle></svg> Ler QR';
+      isScanning = false;
+    } finally {
+      btnScan.disabled = false;
+    }
    }
   });
  }
@@ -276,10 +284,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
   // Proteção contra clique duplo
-  const btn = form.querySelector('button[type="submit"]');
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = "⏳ Enviando...";
+  const btnSubmit = form.querySelector('button[type="submit"]');
+  if (btnSubmit) {
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px; animation: spin 2s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Enviando...';
   }
   document.getElementById('assinatura_b64').value = canvas.toDataURL('image/png');
  });
