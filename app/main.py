@@ -1,4 +1,7 @@
+import os
+import uuid
 from fastapi import FastAPI, Request, Response
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -8,12 +11,37 @@ from slowapi.middleware import SlowAPIMiddleware
 from app.database import engine, Base, SessionLocal
 from app.models import Usuario, Soldador, Catalogo
 from app.routers import auth, inspecoes, soldadores, usuarios, catalogo as router_catalogo, auditoria
+from app.dependencies import templates, get_sessao
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["100 per minute"])
 app = FastAPI(title="Sistema de Qualidade - Soldagem")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
+
+@app.exception_handler(StarletteHTTPException)
+async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
+    if exc.status_code == 404:
+        return templates.TemplateResponse("error.html", {
+            "request": request, "status_code": 404, 
+            "msg": "Página não encontrada", 
+            "detalhe": "O endereço acessado não existe ou foi movido."
+        }, status_code=404)
+    return templates.TemplateResponse("error.html", {
+            "request": request, "status_code": exc.status_code, 
+            "msg": "Erro no sistema", 
+            "detalhe": exc.detail
+        }, status_code=exc.status_code)
+
+@app.exception_handler(Exception)
+async def custom_generic_exception_handler(request: Request, exc: Exception):
+    error_id = str(uuid.uuid4())[:8].upper()
+    print(f"ERRO CRÍTICO [{error_id}]: {exc}")
+    return templates.TemplateResponse("error.html", {
+        "request": request, "status_code": 500, 
+        "msg": "Erro Interno do Servidor", 
+        "detalhe": f"Ocorreu um erro inesperado. Por favor, informe o código {error_id} ao suporte."
+    }, status_code=500)
 
 import os
 
