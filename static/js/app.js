@@ -33,14 +33,35 @@
       topbarNav.classList.toggle("active");
     });
   }
+  // ── Global Debounce ────────────────────────────────────────────────────────
+  document.addEventListener("submit", function (e) {
+    var btn = e.target.querySelector('button[type="submit"]');
+    if (btn && !btn.disabled) {
+      if (e.target.checkValidity && !e.target.checkValidity()) return;
+      setTimeout(function() { 
+        btn.disabled = true; 
+        if (!btn.innerHTML.includes("⏳")) btn.innerHTML = "⏳ Enviando...";
+      }, 0);
+    }
+  });
+
+  // ── Idle Timeout (15 min) ──────────────────────────────────────────────────
+  var idleTime = 0;
+  function resetTimer() { idleTime = 0; }
+  ["mousedown", "mousemove", "keypress", "scroll", "touchstart"].forEach(function(e) {
+    document.addEventListener(e, resetTimer, {passive: true});
+  });
+  setInterval(function() {
+    idleTime++;
+    if (idleTime >= 15) window.location.href = "/logout?reason=timeout";
+  }, 60000);
+
   // ── Service Worker ────────────────────────────────────────────────────────
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", function () {
-      navigator.serviceWorker
-        .register("/static/sw.js")
-        .catch(function (err) {
-          console.log("SW falhou: ", err);
-        });
+      navigator.serviceWorker.register("/static/sw.js").catch(function (err) {
+        console.log("SW falhou: ", err);
+      });
     });
   }
 })();

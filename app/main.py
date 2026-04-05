@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 
 from app.database import engine, Base, SessionLocal
@@ -7,6 +7,14 @@ from app.models import Usuario, Soldador, Catalogo
 from app.routers import auth, inspecoes, soldadores, usuarios, catalogo as router_catalogo, auditoria
 
 app = FastAPI(title="Sistema de Qualidade - Soldagem")
+
+@app.post("/csp-report")
+async def csp_report(request: Request):
+    # Recebe os relatórios de violação de política de segurança do navegador
+    report = await request.json()
+    print(f"ALERTA SEGURANÇA: CSP Violation - {report}")
+    return {"status": "ok"}
+
 
 # Garante que a pasta de fotos existe
 IMG_DIR = os.getenv("IMG_DIR", "/data/fotos")

@@ -126,7 +126,9 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" 
+        integrity="sha384-2QmiRCVNkt8O3PJkVvtGdW29/3RlMoga2KA6dfCYO16iU7Yf3XeWfp4/gnH4gF9M" 
+        crossorigin="anonymous"></script>
 <script id="catalogo-data" type="application/json">
 {{ catalogo|tojson|safe }}
 </script>
@@ -269,9 +271,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
  const form = document.querySelector('form.form-card');
  form.addEventListener('submit', (e) => {
-  if (hasSignature) {
-   document.getElementById('assinatura_b64').value = canvas.toDataURL('image/png');
+  if (!hasSignature) {
+    e.preventDefault();
+    alert("Por favor, colete a assinatura antes de salvar.");
+    return;
   }
+  // Proteção contra clique duplo
+  const btn = form.querySelector('button[type="submit"]');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = "⏳ Enviando...";
+  }
+  document.getElementById('assinatura_b64').value = canvas.toDataURL('image/png');
  });
 
 });
