@@ -1,12 +1,21 @@
-import os
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.database import engine, Base, SessionLocal
 from app.models import Usuario, Soldador, Catalogo
 from app.routers import auth, inspecoes, soldadores, usuarios, catalogo as router_catalogo, auditoria
 
+limiter = Limiter(key_func=get_remote_address, default_limits=["100 per minute"])
 app = FastAPI(title="Sistema de Qualidade - Soldagem")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
+import os
 
 @app.post("/csp-report")
 async def csp_report(request: Request):

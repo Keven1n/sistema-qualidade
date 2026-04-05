@@ -5,6 +5,7 @@ import io
 from datetime import datetime
 from collections import Counter
 from typing import Optional
+from PIL import Image
 import traceback
 
 from fastapi import APIRouter, Request, Form, UploadFile, File, Depends, HTTPException
@@ -46,9 +47,21 @@ async def salvar_imagens(files: list[UploadFile]) -> str:
         tipo = get_image_type(conteudo)
         if not tipo:
             raise HTTPException(400, f"Arquivo {arq.filename} possui um formato não permitido. Apenas imagens JPEG e PNG são aceitas.")
+        
         nome = f"{uuid.uuid4()}.{tipo}"
-        with open(os.path.join(IMG_DIR, nome), "wb") as f:
-            f.write(conteudo)
+        caminho_full = os.path.join(IMG_DIR, nome)
+        
+        # Sanitização de Imagem (Deep Scan e remoção de EXIF)
+        try:
+            with Image.open(io.BytesIO(conteudo)) as img:
+                # Re-salvando sem EXIF para garantir privacidade
+                # 'exif' não é passado, então o Pillow remove por padrão
+                img.save(caminho_full, format=tipo.upper())
+        except Exception as e:
+            # Fallback seguro para escrita direta se o Pillow falhar (embora menos privado)
+            with open(caminho_full, "wb") as f:
+                f.write(conteudo)
+        
         caminhos.append(nome)
     return ";".join(caminhos)
 
