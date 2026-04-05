@@ -19,6 +19,31 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
+@app.middleware("http")
+async def seguranca_middleware(request: Request, call_next):
+    response = await call_next(request)
+    # Cabeçalhos de Segurança Essenciais
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    # IMPORTANTE: Permitir câmera para o leitor de QR Code funcionar
+    response.headers["Permissions-Policy"] = "camera=*, microphone=(), geolocation=()"
+    
+    # Content Security Policy (ajustada para permitir bibliotecas externas e camêra)
+    csp = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "font-src 'self' data: https://fonts.gstatic.com; "
+        "img-src 'self' data: blob:; "
+        "connect-src 'self' https://unpkg.com; "
+        "frame-ancestors 'none'; "
+        "report-uri /csp-report;"
+    )
+    response.headers["Content-Security-Policy"] = csp
+    return response
+
 @app.exception_handler(StarletteHTTPException)
 async def custom_http_exception_handler(request: Request, exc: StarletteHTTPException):
     if exc.status_code == 404:
