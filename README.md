@@ -7,7 +7,6 @@
 ![PWA](https://img.shields.io/badge/PWA-installable-5A0FC8?style=flat&logo=pwa&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat)
 
-###  [Acessar Demo ao Vivo](https://sistema-qualidade-production.up.railway.app)
 
 ---
 
@@ -145,14 +144,6 @@ Cadastro e gerenciamento dos soldadores da fábrica. Centraliza os nomes dos pro
 Administração das linhas de produção e seus respectivos modelos de tanques. Define quais equipamentos estão disponíveis para seleção no formulário de nova inspeção, mantendo o catálogo sempre atualizado com a realidade da fábrica.
 
 <img width="1920" height="998" alt="image" src="https://github.com/user-attachments/assets/80254347-c115-48fb-b12e-74dc93ecb4b1" />
-
----
-
-## Demo Online
-
-> Acesse a versão de demonstração em: **[sistema-qualidade-production.up.railway.app](https://sistema-qualidade-production.up.railway.app)**
->
-> Utilize o **Modo Demonstração** na tela de login para navegar pelo sistema sem necessidade de cadastro.
 
 ---
 
