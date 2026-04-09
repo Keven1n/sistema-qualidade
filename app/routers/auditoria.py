@@ -7,7 +7,8 @@ import csv
 
 from app.database import get_db_session
 from app.models import Auditoria
-from app.dependencies import templates, require_admin, registrar_auditoria
+from app.dependencies import templates, require_admin
+from app.services.auditoria import registrar_auditoria
 
 router = APIRouter(tags=["Auditoria"])
 
@@ -42,7 +43,8 @@ def auditoria_page(request: Request, sessao: dict = Depends(require_admin),
 @router.get("/exportar-auditoria")
 def exportar_auditoria(request: Request, sessao: dict = Depends(require_admin), db: Session = Depends(get_db_session)):
     rows = db.query(Auditoria).order_by(desc(Auditoria.id)).all()
-    registrar_auditoria(sessao.get("usuario", "?"), "exportou_auditoria")
+    registrar_auditoria(db, sessao.get("usuario", "?"), "exportou_auditoria")
+    db.commit()
     
     output = io.StringIO()
     writer = csv.writer(output)
