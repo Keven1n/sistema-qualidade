@@ -17,7 +17,14 @@ from cryptography.fernet import Fernet
 
 from app.database import get_db_session
 from app.models import Inspecao, Catalogo, Soldador
-from app.dependencies import templates, get_sessao, require_auth, require_admin, require_inspetor_ou_admin, registrar_auditoria, verificar_csrf
+from app.dependencies import (
+    templates, get_sessao, require_auth, require_admin, require_inspetor_ou_admin, 
+    verificar_csrf, provide_inspecao_service, provide_soldador_service, provide_catalogo_service
+)
+from app.services.inspecao import InspecaoService
+from app.services.soldador import SoldadorService
+from app.services.catalogo import CatalogoService
+from app.services.auditoria import registrar_auditoria
 
 router = APIRouter(tags=["Inspeções"])
 
@@ -51,14 +58,10 @@ async def salvar_imagens(files: list[UploadFile]) -> str:
         nome = f"{uuid.uuid4()}.{tipo}"
         caminho_full = os.path.join(IMG_DIR, nome)
         
-        # Sanitização de Imagem (Deep Scan e remoção de EXIF)
         try:
             with Image.open(io.BytesIO(conteudo)) as img:
-                # Re-salvando sem EXIF para garantir privacidade
-                # 'exif' não é passado, então o Pillow remove por padrão
                 img.save(caminho_full, format=tipo.upper())
         except Exception as e:
-            # Fallback seguro para escrita direta se o Pillow falhar (embora menos privado)
             with open(caminho_full, "wb") as f:
                 f.write(conteudo)
         
@@ -66,15 +69,17 @@ async def salvar_imagens(files: list[UploadFile]) -> str:
     return ";".join(caminhos)
 
 @router.get("/", response_class=HTMLResponse)
-def dashboard(request: Request, sessao: dict = Depends(get_sessao), data_ini: str = "", data_fim: str = "", db: Session = Depends(get_db_session)):
+def dashboard(request: Request, sessao: dict = Depends(get_sessao), data_ini: str = "", data_fim: str = "", 
+              service: InspecaoService = Depends(provide_inspecao_service)):
     if not sessao: return RedirectResponse("/login", status_code=303)
     
-    query = db.query(Inspecao)
+    query = service.repo.db.query(Inspecao)
     if data_ini: query = query.filter(Inspecao.data >= data_ini)
     if data_fim: query = query.filter(Inspecao.data <= data_fim)
     rows = query.all()
 
-    total = len(rows)
+    stats = service.repo.get_statistics()
+    total = len(rows) # Override para considerar filtros que get_statistics nao contempla
     aprovados = sum(1 for r in rows if r.status == "Aprovado")
     reprovados = sum(1 for r in rows if r.status == "Reprovado / Retrabalho")
     
@@ -91,15 +96,17 @@ def dashboard(request: Request, sessao: dict = Depends(get_sessao), data_ini: st
     })
 
 @router.get("/nova", response_class=HTMLResponse)
-def nova_page(request: Request, sessao: dict = Depends(require_inspetor_ou_admin), reinspeção_de: Optional[int] = None, db: Session = Depends(get_db_session)):
+def nova_page(request: Request, sessao: dict = Depends(require_inspetor_ou_admin), reinspeção_de: Optional[int] = None, 
+              cat_service: CatalogoService = Depends(provide_catalogo_service), sold_service: SoldadorService = Depends(provide_soldador_service),
+              insp_service: InspecaoService = Depends(provide_inspecao_service)):
     if not sessao: return RedirectResponse("/login", status_code=303)
     
-    cat_rows = db.query(Catalogo).filter(Catalogo.ativo == True).order_by(Catalogo.linha, Catalogo.modelo).all()
+    cat_rows = cat_service.repo.db.query(Catalogo).filter(Catalogo.ativo == True).order_by(Catalogo.linha, Catalogo.modelo).all()
     catalogo = {}
     for r in cat_rows: catalogo.setdefault(r.linha, []).append(r.modelo)
-    soldadores = [s.nome for s in db.query(Soldador).filter(Soldador.ativo == True).order_by(Soldador.nome).all()]
+    soldadores = [s.nome for s in sold_service.repo.db.query(Soldador).filter(Soldador.ativo == True).order_by(Soldador.nome).all()]
     
-    origem = db.query(Inspecao).filter(Inspecao.id == reinspeção_de).first() if reinspeção_de else None
+    origem = insp_service.get_by_id(reinspeção_de) if reinspeção_de else None
     return templates.TemplateResponse("nova.html", {
         "request": request, "sessao": sessao, "catalogo": catalogo, "soldadores": soldadores,
         "processos": PROCESSOS, "defeitos_opcoes": DEFEITOS_OPCOES, "today": datetime.today().strftime("%Y-%m-%d"),
@@ -113,20 +120,23 @@ async def nova_post(
     os_num: str = Form(...), data_inspecao: str = Form(...), modelo: str = Form(...), soldador: str = Form(...),
     processo: str = Form(...), status_ins: str = Form(...), defeitos: list[str] = Form(default=[]),
     obs: str = Form(default=""), fotos: list[UploadFile] = File(default=[]), assinatura_b64: str = Form(default=""), reinspeção_de: Optional[int] = Form(default=None),
-    db: Session = Depends(get_db_session)
+    service: InspecaoService = Depends(provide_inspecao_service)
 ):
-    os_num = os_num.strip()
-    if not os_num.isdigit() or len(os_num) > 20:
-        raise HTTPException(400, "O.S. inválida. Deve conter apenas até 20 números.")
-    if len(obs) > 2500:
-        raise HTTPException(400, "Observação excede 2500 caracteres.")
-    if any(len(x) > 100 for x in [modelo, soldador, processo, status_ins, data_inspecao]):
-        raise HTTPException(400, "Um dos campos excedeu o limite de 100 caracteres.")
+    from app.schemas.inspecao import InspecaoCreate
+    try:
+        # Validação com Pydantic Schema!
+        dados = InspecaoCreate(
+            os=os_num, data=data_inspecao, modelo=modelo, soldador=soldador,
+            processo=processo, status=status_ins, defeitos=defeitos, obs=obs,
+            assinatura_b64=assinatura_b64, reinspeção_de=reinspeção_de
+        ).model_dump()
+    except ValueError as e:
+        raise HTTPException(400, str(e))
 
     if not reinspeção_de:
-        duplicada = db.query(Inspecao).filter(Inspecao.os == os_num, Inspecao.reinspeção_de == None).first()
+        duplicada = service.repo.db.query(Inspecao).filter(Inspecao.os == dados['os'], Inspecao.reinspeção_de == None).first()
         if duplicada:
-            return RedirectResponse(f"/nova?erro=O.S. {os_num} já está registrada.", status_code=303)
+            return RedirectResponse(f"/nova?erro=O.S. {dados['os']} já está registrada.", status_code=303)
 
     caminhos = await salvar_imagens(fotos)
     
@@ -144,25 +154,32 @@ async def nova_post(
             f.write(base64.b64decode(b64_data))
         assinatura_path = nome_ass
 
-    nova_inspecao = Inspecao(
-        data=data_inspecao, os=os_num.strip(), modelo=modelo, soldador=soldador,
-        processo=processo, status=status_ins, defeitos=", ".join(defeitos) or "N/A",
-        obs=fernet.encrypt(obs.encode()).decode() if fernet else obs, fotos=caminhos,
-        assinatura=assinatura_path, reinspeção_de=reinspeção_de
-    )
-    db.add(nova_inspecao)
-    db.commit()
-    db.refresh(nova_inspecao)
+    # Delegação para a Criação pelo Service (Remove campos que o modelo do banco não conhece)
+    dict_banco = {
+        "os": dados["os"],
+        "data": dados["data"],
+        "modelo": dados["modelo"],
+        "soldador": dados["soldador"],
+        "processo": dados["processo"],
+        "status": dados["status"],
+        "defeitos": ", ".join(dados["defeitos"]) if dados["defeitos"] else "N/A",
+        "obs": fernet.encrypt(dados["obs"].encode()).decode() if fernet else dados["obs"],
+        "fotos": caminhos,
+        "assinatura": assinatura_path,
+        "reinspeção_de": dados["reinspeção_de"]
+    }
 
-    registrar_auditoria(sessao.get("usuario", "?"), "inspecao_criada", alvo=f"inspecao#{nova_inspecao.id}", detalhe=f"os={os_num.strip()} status={status_ins}")
+    service.criar_inspecao(dict_banco, sessao.get("usuario", "?"))
+
     return RedirectResponse("/historico?ok=1", status_code=303)
 
 @router.get("/historico", response_class=HTMLResponse)
 def historico(request: Request, sessao: dict = Depends(get_sessao), pagina: int = 1, status_f: str = "", 
-              soldador_f: str = "", processo_f: str = "", data_ini: str = "", data_fim: str = "", ok: str = "", db: Session = Depends(get_db_session)):
+              soldador_f: str = "", processo_f: str = "", data_ini: str = "", data_fim: str = "", ok: str = "", 
+              service: InspecaoService = Depends(provide_inspecao_service), sold_service: SoldadorService = Depends(provide_soldador_service)):
     if not sessao: return RedirectResponse("/login", status_code=303)
 
-    query = db.query(Inspecao)
+    query = service.repo.db.query(Inspecao)
     if status_f: query = query.filter(Inspecao.status == status_f)
     if soldador_f: query = query.filter(Inspecao.soldador == soldador_f)
     if processo_f: query = query.filter(Inspecao.processo == processo_f)
@@ -175,7 +192,7 @@ def historico(request: Request, sessao: dict = Depends(get_sessao), pagina: int 
     pagina = max(1, min(pagina, total_pags))
     
     rows = query.order_by(desc(Inspecao.id)).offset((pagina - 1) * ITENS).limit(ITENS).all()
-    soldadores = [s.nome for s in db.query(Soldador).filter(Soldador.ativo == True).order_by(Soldador.nome).all()]
+    soldadores = [s.nome for s in sold_service.repo.db.query(Soldador).filter(Soldador.ativo == True).order_by(Soldador.nome).all()]
 
     return templates.TemplateResponse("historico.html", {
         "request": request, "sessao": sessao, "rows": rows, "total": total, "pagina": pagina, "total_pags": total_pags, 
@@ -183,23 +200,22 @@ def historico(request: Request, sessao: dict = Depends(get_sessao), pagina: int 
     })
 
 @router.get("/historico/{id_reg}/pdf", response_class=Response)
-def exportar_pdf(id_reg: int, request: Request, sessao: dict = Depends(get_sessao), db: Session = Depends(get_db_session)):
+def exportar_pdf(id_reg: int, request: Request, sessao: dict = Depends(get_sessao), service: InspecaoService = Depends(provide_inspecao_service)):
     if not sessao: return RedirectResponse("/login", status_code=303)
     
-    row = db.query(Inspecao).filter(Inspecao.id == id_reg).first()
-    if not row: raise HTTPException(404, "Registro não encontrado.")
+    row = service.get_by_id(id_reg)
     
     html_content = templates.get_template("relatorio_pdf.html").render({
         "row": row, "data_hoje": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     })
     
-    # WeasyPrint engine converte HTML + Imagens file:// locais em PDF vetorial
     try:
         pdf_bytes = HTML(string=html_content, base_url="file:///").write_pdf()
     except Exception as e:
         return Response(content="ERRO NO WEASYPRINT:\n" + traceback.format_exc(), status_code=500, media_type="text/plain")
     
-    registrar_auditoria(sessao.get("usuario", "?"), "exportou_pdf", alvo=f"inspecao#{id_reg}", detalhe=f"O.S: {row.os}")
+    registrar_auditoria(service.db, sessao.get("usuario", "?"), "exportou_pdf", alvo=f"inspecao#{id_reg}", detalhe=f"O.S: {row.os}")
+    service.db.commit()
     
     return Response(
         content=pdf_bytes,
@@ -212,17 +228,14 @@ def exportar_dashboard_dossie(
     request: Request,
     sessao: dict = Depends(get_sessao),
     _csrf: None = Depends(verificar_csrf),
-    db: Session = Depends(get_db_session),
-    data_ini: str = Form(""),
-    data_fim: str = Form(""),
-    c_status: str = Form(""),
-    c_soldador: str = Form(""),
-    c_modelo: str = Form(""),
-    c_defeitos: str = Form("")
+    service: InspecaoService = Depends(provide_inspecao_service),
+    data_ini: str = Form(""), data_fim: str = Form(""),
+    c_status: str = Form(""), c_soldador: str = Form(""),
+    c_modelo: str = Form(""), c_defeitos: str = Form("")
 ):
     if not sessao: return RedirectResponse("/login", status_code=303)
     
-    query = db.query(Inspecao)
+    query = service.repo.db.query(Inspecao)
     if data_ini: query = query.filter(Inspecao.data >= data_ini)
     if data_fim: query = query.filter(Inspecao.data <= data_fim)
     rows = query.all()
@@ -243,19 +256,23 @@ def exportar_dashboard_dossie(
     })
     
     pdf_bytes = HTML(string=html_content, base_url="file:///").write_pdf()
-    registrar_auditoria(sessao.get("usuario", "?"), "exportou_dossie")
+    registrar_auditoria(service.db, sessao.get("usuario", "?"), "exportou_dossie")
+    service.db.commit()
+    
     return Response(
         content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": 'attachment; filename="ThermoLac_Dossie_Mensal.pdf"'}
     )
 
 @router.get("/exportar-csv")
-def exportar_csv(request: Request, sessao: dict = Depends(require_auth), data_ini: str = "", data_fim: str = "", db: Session = Depends(get_db_session)):
-    query = db.query(Inspecao).order_by(desc(Inspecao.id))
+def exportar_csv(request: Request, sessao: dict = Depends(require_auth), data_ini: str = "", data_fim: str = "", service: InspecaoService = Depends(provide_inspecao_service)):
+    query = service.repo.db.query(Inspecao).order_by(desc(Inspecao.id))
     if data_ini: query = query.filter(Inspecao.data >= data_ini)
     if data_fim: query = query.filter(Inspecao.data <= data_fim)
     rows = query.all()
     
-    registrar_auditoria(sessao.get("usuario", "?"), "exportou_csv")
+    registrar_auditoria(service.db, sessao.get("usuario", "?"), "exportou_csv")
+    service.db.commit()
+    
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["ID", "Data", "O.S.", "Modelo", "Soldador", "Processo", "Status", "Defeitos", "Obs", "Assinatura", "Reinspeção de"])
@@ -264,39 +281,44 @@ def exportar_csv(request: Request, sessao: dict = Depends(require_auth), data_in
     return StreamingResponse(iter([output.getvalue()]), media_type="text/csv", headers={"Content-Disposition": "attachment; filename=inspecoes.csv"})
 
 @router.get("/editar/{id_reg}", response_class=HTMLResponse)
-def editar_page(id_reg: int, request: Request, sessao: dict = Depends(require_admin), db: Session = Depends(get_db_session)):
-    row = db.query(Inspecao).filter(Inspecao.id == id_reg).first()
-    if not row: raise HTTPException(404, "Registro não encontrado.")
-    soldadores = [s.nome for s in db.query(Soldador).filter(Soldador.ativo == True).order_by(Soldador.nome).all()]
+def editar_page(id_reg: int, request: Request, sessao: dict = Depends(require_admin), service: InspecaoService = Depends(provide_inspecao_service), sol_service: SoldadorService = Depends(provide_soldador_service)):
+    row = service.get_by_id(id_reg)
+    soldadores = [s.nome for s in sol_service.repo.db.query(Soldador).filter(Soldador.ativo == True).order_by(Soldador.nome).all()]
     return templates.TemplateResponse("editar.html", {"request": request, "sessao": sessao, "row": row, "soldadores": soldadores, "processos": PROCESSOS})
 
 @router.post("/editar/{id_reg}")
 def editar_post(id_reg: int, request: Request, sessao: dict = Depends(require_admin), _csrf: None = Depends(verificar_csrf),
                 os_num: str = Form(...), soldador: str = Form(...),
-                processo: str = Form(...), status_ins: str = Form(...), defeitos: str = Form(default=""), obs: str = Form(default=""), db: Session = Depends(get_db_session)):
+                processo: str = Form(...), status_ins: str = Form(...), defeitos: str = Form(default=""), obs: str = Form(default=""), service: InspecaoService = Depends(provide_inspecao_service)):
     
-    os_num = os_num.strip()
-    if not os_num.isdigit() or len(os_num) > 20:
-        raise HTTPException(400, "O.S. inválida. Deve conter apenas até 20 números.")
-    if len(obs) > 2500:
-        raise HTTPException(400, "Observação excede 2500 caracteres.")
-    if any(len(x) > 100 for x in [soldador, processo, status_ins]) or len(defeitos.strip()) > 300:
-        raise HTTPException(400, "Um dos campos de texto excedeu o limite máximo.")
+    from app.schemas.inspecao import InspecaoCreate
+    try:
+        dados = InspecaoCreate(
+            os=os_num, data="2000-01-01", modelo="bypass", soldador=soldador,
+            processo=processo, status=status_ins, defeitos=[defeitos] if defeitos else [], obs=obs
+        ).model_dump()
+    except ValueError as e:
+        raise HTTPException(400, str(e))
 
-    row = db.query(Inspecao).filter(Inspecao.id == id_reg).first()
-    if not row: raise HTTPException(404, "Registro não encontrado.")
+    row = service.get_by_id(id_reg)
     
     antes = f"os={row.os} soldador={row.soldador} status={row.status}"
-    row.os, row.soldador, row.processo, row.status, row.defeitos, row.obs = os_num, soldador.strip(), processo, status_ins, defeitos.strip(), obs
-    db.commit()
-    registrar_auditoria(sessao.get("usuario", "?"), "inspecao_editada", alvo=f"inspecao#{id_reg}", detalhe=f"antes: {antes}")
+    
+    # Faz update manual
+    row.os, row.soldador, row.processo, row.status, row.defeitos, row.obs = dados["os"], dados["soldador"], dados["processo"], dados["status"], defeitos.strip(), dados["obs"]
+    service.db.commit()
+    
+    registrar_auditoria(service.db, sessao.get("usuario", "?"), "inspecao_editada", alvo=f"inspecao#{id_reg}", detalhe=f"antes: {antes}")
+    service.db.commit()
     return RedirectResponse("/historico", status_code=303)
 
 @router.post("/excluir/{id_reg}")
-def excluir(id_reg: int, request: Request, sessao: dict = Depends(require_admin), _csrf: None = Depends(verificar_csrf), db: Session = Depends(get_db_session)):
-    row = db.query(Inspecao).filter(Inspecao.id == id_reg).first()
-    if not row: raise HTTPException(404, "Registro não encontrado.")
-    db.delete(row)
-    db.commit()
-    registrar_auditoria(sessao.get("usuario", "?"), "inspecao_excluida", alvo=f"inspecao#{id_reg}", detalhe=f"os={row.os} status={row.status}")
+def excluir(id_reg: int, request: Request, sessao: dict = Depends(require_admin), _csrf: None = Depends(verificar_csrf), service: InspecaoService = Depends(provide_inspecao_service)):
+    row = service.get_by_id(id_reg)
+    
+    service.delete(id_reg) # Deleta e commita!
+    
+    registrar_auditoria(service.db, sessao.get("usuario", "?"), "inspecao_excluida", alvo=f"inspecao#{id_reg}", detalhe=f"os={row.os} status={row.status}")
+    service.db.commit()
+    
     return RedirectResponse("/historico", status_code=303)

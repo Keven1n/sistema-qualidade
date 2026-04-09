@@ -10,7 +10,7 @@ from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from cryptography.fernet import Fernet
 
-from app.database import SessionLocal
+from app.database import SessionLocal, get_db_session
 from app.models import Auditoria
 
 _raw_secret = os.getenv("SECRET_KEY", "troque-em-producao-use-valor-longo-aleatorio")
@@ -84,14 +84,10 @@ def require_inspetor_ou_admin(request: Request):
         raise HTTPException(status_code=403, detail="Sem permissão para esta ação.")
     return sessao
 
-# Veja como a auditoria fica muito mais limpa com o SQLAlchemy!
-def registrar_auditoria(usuario: str, acao: str, alvo: str = None, detalhe: str = None):
-    db = SessionLocal()
-    try:
-        nova_auditoria = Auditoria(usuario=usuario, acao=acao, alvo=alvo, detalhe=detalhe)
-        db.add(nova_auditoria)
-        db.commit()
-    except Exception:
-        pass
-    finally:
-        db.close()
+from app.services import get_usuario_service, get_auth_service, get_inspecao_service, get_soldador_service, get_catalogo_service
+
+def provide_usuario_service(db = Depends(get_db_session)): return get_usuario_service(db)
+def provide_auth_service(db = Depends(get_db_session)): return get_auth_service(db)
+def provide_inspecao_service(db = Depends(get_db_session)): return get_inspecao_service(db)
+def provide_soldador_service(db = Depends(get_db_session)): return get_soldador_service(db)
+def provide_catalogo_service(db = Depends(get_db_session)): return get_catalogo_service(db)

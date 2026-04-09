@@ -1,19 +1,22 @@
 # app/routers/soldadores.py
 from fastapi import APIRouter, Request, Form, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
-from sqlalchemy.orm import Session
 
-from app.database import get_db_session
-from app.models import Soldador
-from app.dependencies import templates, require_admin, registrar_auditoria, verificar_csrf
+from app.schemas.soldador import SoldadorCreate
+from app.services.soldador import SoldadorService
+from app.services.auditoria import registrar_auditoria
+from app.dependencies import templates, require_admin, verificar_csrf, provide_soldador_service
 
-# O prefixo indica que todas as rotas aqui começam por /soldadores
 router = APIRouter(prefix="/soldadores", tags=["Soldadores"])
 
 @router.get("", response_class=HTMLResponse)
-def soldadores_page(request: Request, sessao: dict = Depends(require_admin), db: Session = Depends(get_db_session)):
-    # SQLAlchemy em ação! Substitui as strings SQL puras.
-    soldadores = db.query(Soldador).order_by(Soldador.nome).all()
+def soldadores_page(request: Request, sessao: dict = Depends(require_admin), service: SoldadorService = Depends(provide_soldador_service)):
+    # Delegamos para o service
+    soldadores = service.list_all()
+    # Para o template, precisamos ordená-los. O repositório já poderia ordenar? 
+    # Como BaseRepository.find_all não tem order_by genérico, organizamos em memória:
+    soldadores = sorted(soldadores, key=lambda x: x.nome)
+    
     return templates.TemplateResponse("soldadores.html", {
         "request": request, "sessao": sessao, "soldadores": soldadores
     })
@@ -21,35 +24,28 @@ def soldadores_page(request: Request, sessao: dict = Depends(require_admin), db:
 @router.post("/criar")
 def criar_soldador(request: Request, sessao: dict = Depends(require_admin),
                    _csrf: None = Depends(verificar_csrf),
-                   nome: str = Form(...), db: Session = Depends(get_db_session)):
+                   nome: str = Form(...), service: SoldadorService = Depends(provide_soldador_service)):
     
-    if len(nome.strip()) > 100:
-        raise HTTPException(400, "O nome excede o limite máximo de 100 caracteres.")
-
-    # Verifica se já existe um soldador com esse nome
-    existente = db.query(Soldador).filter(Soldador.nome == nome.strip()).first()
-    if existente:
-        raise HTTPException(400, "Soldador já existe.")
+    # Validation com Pydantic acontece dentro ou antes. 
+    # Validando via schema para testar Pydantic validation:
+    try:
+        dados = SoldadorCreate(nome=nome).model_dump()
+        service.criar_soldador(dados, usuario_logado_id=sessao.get("usuario", "?"))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
         
-    novo_soldador = Soldador(nome=nome.strip())
-    db.add(novo_soldador)
-    db.commit()
-    
-    registrar_auditoria(sessao.get("usuario", "?"), "soldador_criado", alvo=nome.strip())
     return RedirectResponse("/soldadores", status_code=303)
 
 @router.post("/{id_s}/toggle")
 def toggle_soldador(id_s: int, request: Request, sessao: dict = Depends(require_admin),
                     _csrf: None = Depends(verificar_csrf),
-                    ativo: int = Form(...), db: Session = Depends(get_db_session)):
+                    ativo: int = Form(...), service: SoldadorService = Depends(provide_soldador_service)):
     
-    soldador = db.query(Soldador).filter(Soldador.id == id_s).first()
-    if not soldador:
-        raise HTTPException(404, "Soldador não encontrado.")
-        
-    soldador.ativo = bool(ativo)
-    db.commit()
+    soldador = service.toggle(id_s, "ativo")
     
+    # Auditoria manual se o service toggle base não tiver:
     acao = "soldador_ativado" if ativo else "soldador_desativado"
-    registrar_auditoria(sessao.get("usuario", "?"), acao, alvo=soldador.nome)
+    registrar_auditoria(service.db, sessao.get("usuario", "?"), acao, alvo=soldador.nome)
+    service.db.commit() # Unit of work manual para os passos acoplados à auditoria extra da rota
+    
     return RedirectResponse("/soldadores", status_code=303)
