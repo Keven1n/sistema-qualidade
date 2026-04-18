@@ -8,10 +8,21 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
+import logging
+
 from app.database import engine, Base, SessionLocal
 from app.models import Usuario, Soldador, Catalogo
 from app.routers import auth, inspecoes, soldadores, usuarios, catalogo as router_catalogo, auditoria
 from app.dependencies import templates, get_sessao
+from app.config import settings
+
+# --- Configuração de Logging ---
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["100 per minute"])
 app = FastAPI(title="Sistema de Qualidade - Soldagem")
@@ -61,7 +72,8 @@ async def custom_http_exception_handler(request: Request, exc: StarletteHTTPExce
 @app.exception_handler(Exception)
 async def custom_generic_exception_handler(request: Request, exc: Exception):
     error_id = str(uuid.uuid4())[:8].upper()
-    print(f"ERRO CRÍTICO [{error_id}]: {exc}")
+    logger.exception(f"ERRO CRÍTICO [{error_id}]: {exc}")
+
     return templates.TemplateResponse("error.html", {
         "request": request, "status_code": 500, 
         "msg": "Erro Interno do Servidor", 
@@ -74,12 +86,12 @@ import os
 async def csp_report(request: Request):
     # Recebe os relatórios de violação de política de segurança do navegador
     report = await request.json()
-    print(f"ALERTA SEGURANCA: CSP Violation - {report}")
+    logger.warning(f"ALERTA SEGURANCA: CSP Violation - {report}")
     return {"status": "ok"}
 
 
 # Garante que a pasta de fotos existe
-IMG_DIR = os.getenv("IMG_DIR", "/data/fotos")
+IMG_DIR = settings.img_dir
 os.makedirs(IMG_DIR, exist_ok=True)
 
 # Monta os arquivos estáticos
@@ -96,8 +108,6 @@ app.include_router(auditoria.router)
 
 @app.on_event("startup")
 def startup():
-    # Isso cria todas as tabelas no PostgreSQL ou SQLite automaticamente!
-    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     
     try:
@@ -119,15 +129,15 @@ def startup():
                     db.add(Catalogo(linha=linha, modelo=modelo))
             db.commit()
 
-        # Garante o usuário lucas (Admin default) via variável de ambiente
-        HASH_KEVIN = os.getenv("HASH_KEVIN", "").strip().strip('"\'').strip()
-        if HASH_KEVIN.startswith('$2b$') and len(HASH_KEVIN) >= 59:
-            admin = db.query(Usuario).filter(Usuario.usuario == 'kevin').first()
-            if not admin:
-                db.add(Usuario(usuario='kevin', nome='Kevin', hash_senha=HASH_KEVIN, papel='admin'))
+        # Garante o usuário admin (Admin default) via variável de ambiente
+        HASH_ADMIN = settings.hash_admin.strip().strip('"\'').strip()
+        if HASH_ADMIN.startswith('$2b$') and len(HASH_ADMIN) >= 59:
+            admin_user = db.query(Usuario).filter(Usuario.usuario == 'admin').first()
+            if not admin_user:
+                db.add(Usuario(usuario='admin', nome='Administrador', hash_senha=HASH_ADMIN, papel='admin'))
             else:
-                admin.hash_senha = HASH_KEVIN
-                admin.papel = 'admin'
+                admin_user.hash_senha = HASH_ADMIN
+                admin_user.papel = 'admin'
             db.commit()
             
     finally:

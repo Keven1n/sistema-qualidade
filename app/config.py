@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     # Security
     secret_key: str = "troque-em-producao-use-valor-longo-aleatorio"
     encryption_key: Optional[str] = None
+    hash_admin: str = ""
     
     # Session
     session_timeout_minutes: int = 60
