@@ -134,6 +134,9 @@ def startup():
 
         # Garante o usuário admin (Admin default) via variável de ambiente
         HASH_ADMIN = settings.hash_admin.strip().strip('"\'').strip()
+        # Se a pessoa copiou com $$, corrige para $
+        HASH_ADMIN = HASH_ADMIN.replace("$$", "$")
+        
         if HASH_ADMIN.startswith('$2b$') and len(HASH_ADMIN) >= 59:
             admin_user = db.query(Usuario).filter(Usuario.usuario == 'admin').first()
             if not admin_user:
