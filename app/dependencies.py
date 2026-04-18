@@ -9,20 +9,24 @@ from fastapi import Request, HTTPException, Depends, Form
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from cryptography.fernet import Fernet
+import logging
 
 from app.database import SessionLocal, get_db_session
 from app.models import Auditoria
+from app.config import settings
 
-_raw_secret = os.getenv("SECRET_KEY", "troque-em-producao-use-valor-longo-aleatorio")
+logger = logging.getLogger(__name__)
+
+_raw_secret = settings.secret_key
 if _raw_secret == "troque-em-producao-use-valor-longo-aleatorio":
-    print("AVISO: Usando SECRET_KEY padrão! Altere isso em produção para segurança real.")
+    logger.warning("AVISO: Usando SECRET_KEY padrão! Altere isso em produção para segurança real.")
 
 SECRET_KEY = _raw_secret
 # Derivamos uma chave Fernet a partir da SECRET_KEY para criptografar os dados da sessão
 _fernet_key = base64.urlsafe_b64encode(hashlib.sha256(SECRET_KEY.encode()).digest())
 _fernet = Fernet(_fernet_key)
 
-TIMEOUT_MIN = int(os.getenv("SESSION_TIMEOUT_MINUTES", 60))
+TIMEOUT_MIN = settings.session_timeout_minutes
 serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 # Centralizamos os templates aqui para serem usados em qualquer router

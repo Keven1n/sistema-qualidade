@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     shared-mime-info \
     fontconfig \
     fonts-liberation \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
@@ -25,14 +26,19 @@ COPY app/       ./app/
 COPY templates/ ./templates/
 COPY static/    ./static/
 
-# Cron: backup automático todo o dia às 02:00 e às 14:00
-RUN echo "0 2,14 * * * root python3 /app/app/backup.py >> /proc/1/fd/1 2>&1" \
+# Criar usuário não-root e ajustar permissões
+RUN useradd -m -s /bin/bash appuser && \
+    mkdir -p /data/fotos /data/backups && \
+    chown -R appuser:appuser /app /data
+
+# Cron: backup automático todo o dia às 02:00 e às 14:00 (rodando como appuser)
+RUN echo "0 2,14 * * * appuser python3 /app/app/backup.py >> /proc/1/fd/1 2>&1" \
     > /etc/cron.d/backup-qualidade \
     && chmod 0644 /etc/cron.d/backup-qualidade
 
-RUN mkdir -p /data/fotos /data/backups
-
 EXPOSE 8000
 
-# Railway injeta a porta via $PORT; fallback para 8000 em ambiente local
-CMD cron && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --app-dir /app
+# Script de entrypoint inline: garante permissões dos volumes antes de rodar, inicia cron como root e uvicorn como appuser
+CMD chown -R appuser:appuser /data && \
+    cron && \
+    gosu appuser uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --app-dir /app --proxy-headers --forwarded-allow-ips="*"
