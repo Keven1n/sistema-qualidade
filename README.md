@@ -12,7 +12,7 @@
 
 ## Sobre o Projeto
 
-Plataforma web completa para registro e controle de inspeções de soldagem em linhas de produção industrial. Desenvolvida como Progressive Web App (PWA), funciona diretamente no celular do inspetor sem necessidade de instalação via loja de apps.
+Plataforma web completa para registro e controle de inspeções de soldagem em linhas de produção industrial. Desenvolvida como Progressive Web App (PWA), funciona diretamente no celular do inspetor sem necessidade de instalação via loja de apps. Acesse a versão implantada em: **[sistema-qualidade-production.up.railway.app](https://sistema-qualidade-production.up.railway.app)**
 
 O sistema oferece rastreabilidade total do processo de qualidade: desde o registro fotográfico no chão de fábrica até a emissão de laudos técnicos em PDF com assinatura digital eletrônica.
 
@@ -99,7 +99,7 @@ O sistema oferece rastreabilidade total do processo de qualidade: desde o regist
 
 **Login**
 
-Tela segura de autenticação com modo demonstração (visitante) para acesso somente leitura.
+Tela segura de autenticação com prevenção contra brute-force e bloqueio de conta.
 
 <img width="1920" height="998" alt="image" src="https://github.com/user-attachments/assets/805d1333-56ce-49b4-bd98-0a0bbc45c5aa" />
 
